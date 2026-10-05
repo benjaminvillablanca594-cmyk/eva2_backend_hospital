@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ingresar Paciente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center min-vh-100">
+    <!-- min-vh-100 y d-flex centran la tarjeta vertical y horizontalmente en la pantalla -->
+    <div class="container" style="max-width: 600px;">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h3 class="mb-0">Registrar Nuevo Paciente</h3>
+            </div>
+            <div class="card-body p-4">
+                
+                <!-- El método POST oculta los datos en el envío. -->
+                <form method="POST">
+                    
+                    <!-- {% csrf_token %} es un token de seguridad OBLIGATORIO en Django para formularios POST. 
+                         Si no lo pones, Django bloquea el envío para evitar hackeos de suplantación. -->
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">RUT:</label>
+                        <!-- El atributo 'name' DEBE coincidir exactamente con lo que capturas (request.POST.get) en views.py -->
+                        <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Completo:</label>
+                        <input type="text" name="nombre_completo" class="form-control" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Edad:</label>
+                            <input type="number" name="edad" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha de Ingreso:</label>
+                            <input type="date" name="fecha_ingreso" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email de Contacto:</label>
+                        <input type="email" name="email_contacto" class="form-control" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Estado del Paciente:</label>
+                        <select name="estado" class="form-select">
+                            <option value="En Espera">En Espera</option>
+                            <option value="Atendido">Atendido</option>
+                            <option value="Derivado">Derivado</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <!-- Botón tipo submit: gatilla el envío de los datos a views.py -->
+                        <button type="submit" class="btn btn-success fw-bold">Guardar Paciente</button>
+                        <!-- Botón normal: te devuelve a la lista principal usando la URL -->
+                        <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
