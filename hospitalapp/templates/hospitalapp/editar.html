@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Paciente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center min-vh-100">
+    <div class="container" style="max-width: 600px;">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark text-center">
+                <!-- Mostramos el nombre del paciente actual en el título de la tarjeta -->
+                <h3 class="mb-0">Editando a: {{ paciente.nombre_completo }}</h3>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">RUT:</label>
+                        <!-- La gran diferencia con el 'crear' es que usamos el atributo 'value' para rellenar 
+                             la caja de texto con los datos que llegaron desde la base de datos ({{ paciente.rut }}) -->
+                        <input type="text" name="rut" class="form-control" value="{{ paciente.rut }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Completo:</label>
+                        <input type="text" name="nombre_completo" class="form-control" value="{{ paciente.nombre_completo }}" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Edad:</label>
+                            <input type="number" name="edad" class="form-control" value="{{ paciente.edad }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha de Ingreso:</label>
+                            <!-- El filtro |date:'Y-m-d' formatea la fecha para que el input type="date" pueda leerla correctamente -->
+                            <input type="date" name="fecha_ingreso" class="form-control" value="{{ paciente.fecha_ingreso|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email de Contacto:</label>
+                        <input type="email" name="email_contacto" class="form-control" value="{{ paciente.email_contacto }}" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Estado del Paciente:</label>
+                        <select name="estado" class="form-select">
+                            <!-- Utilizamos un if en la misma línea para colocar el atributo 'selected' al estado original -->
+                            <option value="En Espera" {% if paciente.estado == 'En Espera' %}selected{% endif %}>En Espera</option>
+                            <option value="Atendido" {% if paciente.estado == 'Atendido' %}selected{% endif %}>Atendido</option>
+                            <option value="Derivado" {% if paciente.estado == 'Derivado' %}selected{% endif %}>Derivado</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning fw-bold text-dark">Actualizar Datos</button>
+                        <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
