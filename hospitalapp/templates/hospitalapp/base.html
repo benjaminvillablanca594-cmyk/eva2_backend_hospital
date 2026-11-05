@@ -1,0 +1,253 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    {% comment %} ================================================================
+       PLANTILLA BASE (herencia de plantillas)
+       Todas las páginas heredan de este archivo. Aquí está lo que se
+       repite en todas: estilos, barra superior, encabezado, pie de
+       página y las funciones JavaScript compartidas.
+       Cada página hija solo rellena los "bloques" ({% block %}).
+       ================================================================ {% endcomment %}
+    <meta charset="UTF-8">
+    <!-- Adapta la página al ancho de celulares y tablets -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Inicio{% endblock %} | Hospital · Gestión de Pacientes</title>
+
+    <!-- Estilos. La etiqueta "static" arma la ruta a la carpeta hospitalapp/static/.
+         Todo está dentro del proyecto: funciona aunque no haya internet. -->
+    <link rel="stylesheet" href="{% static 'hospitalapp/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'hospitalapp/vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'hospitalapp/css/estilos.css' %}">
+    <link rel="icon" href="{% static 'hospitalapp/iconos/hospital.svg' %}">
+</head>
+
+<body>
+{% block pagina %}
+
+    <!-- ================================================================
+         BARRA SUPERIOR: logo, menú y usuario conectado
+         ================================================================ -->
+    <nav class="barra-superior">
+        <div class="container d-flex align-items-center justify-content-between gap-3">
+
+            <!-- Logo del hospital (lleva al listado) -->
+            <a href="{% url 'listar_pacientes' %}" class="marca">
+                <span class="marca-logo"><span class="hi hi-hospital"></span></span>
+                <span>
+                    <span class="marca-nombre d-block">Hospital</span>
+                    <span class="marca-sub">Gestión de Pacientes</span>
+                </span>
+            </a>
+
+            <!-- Menú: se marca "activo" la página actual
+                 (request.resolver_match.url_name = nombre de la ruta en urls.py) -->
+            {% with ruta=request.resolver_match.url_name %}
+            <div class="menu-principal">
+                <a href="{% url 'listar_pacientes' %}" class="{% if ruta == 'listar_pacientes' %}activo{% endif %}">
+                    <span class="hi hi-fichas"></span><span class="d-none d-md-inline">Pacientes</span>
+                </a>
+                <a href="{% url 'crear_paciente' %}" class="{% if ruta == 'crear_paciente' %}activo{% endif %}">
+                    <i class="bi bi-plus-circle"></i><span class="d-none d-md-inline">Nuevo paciente</span>
+                </a>
+            </div>
+            {% endwith %}
+
+            <!-- Usuario conectado (viene de la sesión de Django) y botón para salir -->
+            {% if user.is_authenticated %}
+            <div class="chip-usuario">
+                <span class="avatar avatar-sm avatar-claro">{{ user.username|slice:":2"|upper }}</span>
+                <span class="d-none d-lg-inline">{{ user.username }}</span>
+                <button type="button" id="btnSalir" class="btn btn-salir btn-sm" title="Cerrar sesión">
+                    <i class="bi bi-box-arrow-right"></i><span class="d-none d-sm-inline ms-1">Salir</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- ================================================================
+         ENCABEZADO DE LA PÁGINA
+         Cada página rellena: migas, título, descripción, botón e ilustración
+         ================================================================ -->
+    <header class="encabezado-pagina">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <nav class="migas" aria-label="Ruta de navegación">
+                        <a href="{% url 'listar_pacientes' %}">Inicio</a>
+                        {% block migas %}{% endblock %}
+                    </nav>
+                    <h1>{% block titulo_pagina %}{% endblock %}</h1>
+                    <p class="descripcion mb-0">{% block descripcion %}{% endblock %}</p>
+                    {% block acciones_encabezado %}{% endblock %}
+                </div>
+                <!-- La ilustración solo se muestra en pantallas grandes -->
+                <div class="col-lg-4 d-none d-lg-block text-end">
+                    {% block ilustracion %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================================================================
+         CONTENIDO PROPIO DE CADA PÁGINA
+         ================================================================ -->
+    <main class="container contenido-principal">
+        {% block contenido %}{% endblock %}
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="pie-pagina">
+        <div class="container">
+            <span class="hi hi-hospital me-1"></span> Hospital · Gestión de Pacientes
+        </div>
+    </footer>
+
+{% endblock %}
+
+    <!-- ================================================================
+         FUNCIONES JAVASCRIPT COMPARTIDAS: SESIÓN Y TOKEN
+         ================================================================ -->
+    <script>
+        // ---------------------------------------------------------------
+        // obtenerToken(): devuelve el token guardado al iniciar sesión.
+        // Si no existe, envía al usuario al login.
+        // ---------------------------------------------------------------
+        function obtenerToken() {
+            const token = sessionStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/';
+            }
+            return token;
+        }
+
+        // ---------------------------------------------------------------
+        // sesionInvalida(): se usa cuando la API responde 401 o 403
+        // (token ausente, inválido o borrado). Limpia y vuelve al login.
+        // ---------------------------------------------------------------
+        function sesionInvalida() {
+            sessionStorage.clear();
+            window.location.href = '/';
+        }
+
+        // ---------------------------------------------------------------
+        // cerrarSesion(): llama a POST /api/logout/ para que el servidor
+        // BORRE el token de la base de datos, y luego limpia el navegador.
+        // ---------------------------------------------------------------
+        async function cerrarSesion() {
+            const token = sessionStorage.getItem('token');
+            try {
+                if (token) {
+                    await fetch('/api/logout/', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Token ${token}` }
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+            } finally {
+                sessionStorage.clear();
+                window.location.href = '/';
+            }
+        }
+
+        // Conecta el botón "Salir" de la barra superior (si existe)
+        const btnSalir = document.getElementById('btnSalir');
+        if (btnSalir) {
+            btnSalir.addEventListener('click', cerrarSesion);
+        }
+
+        // ---------------------------------------------------------------
+        // mostrarMensaje(elemento, texto, tipo): muestra un aviso de color.
+        // tipo: 'success' (verde), 'danger' (rojo), 'warning', 'info'.
+        // SEGURIDAD: usa textContent (no innerHTML), así ningún texto
+        // puede ejecutarse como código HTML o JavaScript (ataque XSS).
+        // ---------------------------------------------------------------
+        function mostrarMensaje(elemento, texto, tipo) {
+            elemento.className = 'alert alert-' + tipo;
+            elemento.textContent = texto;
+            elemento.hidden = false;
+        }
+
+        // ---------------------------------------------------------------
+        // notificar(texto, tipo): aviso flotante en la esquina superior
+        // derecha que desaparece solo a los 5 segundos.
+        // tipo: 'exito' (verde), 'error' (rojo), 'advertencia' (amarillo), 'info'.
+        // ---------------------------------------------------------------
+        const ICONOS_NOTIFICACION = {
+            exito: 'bi-check-circle-fill',
+            error: 'bi-x-octagon-fill',
+            advertencia: 'bi-exclamation-triangle-fill',
+            info: 'bi-info-circle-fill'
+        };
+        let ultimaNotificacion = { texto: '', hora: 0 };
+
+        function notificar(texto, tipo = 'info') {
+            // Evita repetir el mismo aviso varias veces seguidas
+            const ahora = Date.now();
+            if (texto === ultimaNotificacion.texto && ahora - ultimaNotificacion.hora < 2000) return;
+            ultimaNotificacion = { texto: texto, hora: ahora };
+
+            // Contenedor de avisos (se crea la primera vez)
+            let contenedor = document.getElementById('notificaciones');
+            if (!contenedor) {
+                contenedor = document.createElement('div');
+                contenedor.id = 'notificaciones';
+                contenedor.className = 'notificaciones';
+                contenedor.setAttribute('aria-live', 'assertive');
+                document.body.appendChild(contenedor);
+            }
+
+            const aviso = document.createElement('div');
+            aviso.className = 'notificacion notificacion-' + tipo;
+            aviso.setAttribute('role', 'alert');
+            const icono = document.createElement('i');
+            icono.className = 'bi ' + (ICONOS_NOTIFICACION[tipo] || ICONOS_NOTIFICACION.info);
+            const mensaje = document.createElement('span');
+            mensaje.textContent = texto;               // textContent: seguro contra XSS
+            aviso.append(icono, mensaje);
+            contenedor.appendChild(aviso);
+
+            // Desaparece a los 5 segundos
+            setTimeout(function () {
+                aviso.classList.add('saliendo');
+                setTimeout(() => aviso.remove(), 300);
+            }, 5000);
+        }
+
+        // ---------------------------------------------------------------
+        // activarContadores(): todo input con el atributo data-contador
+        // muestra "usados / máximo" caracteres. El máximo sale de maxlength.
+        // ---------------------------------------------------------------
+        function activarContadores() {
+            document.querySelectorAll('[data-contador]').forEach(function (campo) {
+                const contador = document.getElementById(campo.dataset.contador);
+                const maximo = Number(campo.getAttribute('maxlength'));
+
+                function actualizar() {
+                    contador.textContent = campo.value.length + ' / ' + maximo;
+                    contador.classList.toggle('limite', campo.value.length >= maximo);   // ámbar al llegar al límite
+                }
+
+                campo.addEventListener('input', actualizar);
+                actualizar();
+            });
+        }
+        activarContadores();
+
+        // ---------------------------------------------------------------
+        // iniciales("María José Pérez") -> "MP"  (para el avatar redondo)
+        // ---------------------------------------------------------------
+        function iniciales(nombre) {
+            const partes = nombre.trim().split(/\s+/);
+            const primera = partes[0] ? partes[0][0] : '';
+            const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+            return (primera + ultima).toUpperCase();
+        }
+    </script>
+
+    <!-- JavaScript propio de cada página -->
+    {% block script %}{% endblock %}
+</body>
+</html>

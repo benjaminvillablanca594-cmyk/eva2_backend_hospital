@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Django REST Framework
+    'rest_framework',
+    'rest_framework.authtoken',
     'hospitalapp',
 ]
 
@@ -109,9 +112,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-cl'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Santiago'
 
 USE_I18N = True
 
@@ -127,3 +130,40 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# =====================================================================
+# DJANGO REST FRAMEWORK
+# =====================================================================
+REST_FRAMEWORK = {
+    # Cómo se identifica al usuario en la API: con el encabezado
+    #   Authorization: Token <clave>
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    # Por defecto TODA la API exige estar autenticado.
+    # Las vistas públicas (ej. login) lo indican con AllowAny.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    # SEGURIDAD: límite de intentos de login para frenar ataques de
+    # fuerza bruta (probar muchas contraseñas). Al superarlo: HTTP 429.
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '5/minute',
+    },
+    # Mensajes de error claros y en español para TODA la API
+    # (ver hospitalapp/api_errores.py)
+    'EXCEPTION_HANDLER': 'hospitalapp.api_errores.manejador_errores_api',
+}
+
+
+# =====================================================================
+# SESIÓN WEB (páginas protegidas con @login_required)
+# =====================================================================
+# Si alguien entra a una página protegida sin sesión, Django lo
+# redirige a esta ruta (nombre definido en hospitalapp/urls.py).
+LOGIN_URL = 'login_pagina'
+
+# SEGURIDAD: la sesión termina al cerrar el navegador, igual que el
+# token guardado en sessionStorage.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True

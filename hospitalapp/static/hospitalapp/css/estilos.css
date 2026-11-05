@@ -1,0 +1,919 @@
+/* =====================================================================
+   ESTILOS DEL HOSPITAL
+   ---------------------------------------------------------------------
+   Este archivo define la identidad visual de toda la aplicación.
+   Bootstrap entrega la base (grillas, botones, formularios) y aquí
+   personalizamos colores, tipografía, espacios y componentes propios.
+
+   ÍNDICE
+     1. Tipografía
+     2. Paleta de colores (variables)
+     3. Base de la página
+     4. Íconos médicos (Healthicons)
+     5. Barra superior (navegación)
+     6. Encabezado de cada página
+     7. Tarjetas
+     8. Tarjetas de estadísticas
+     9. Estados del paciente (píldoras)
+    10. Avatar con iniciales
+    11. Botones
+    12. Tabla y tarjetas de pacientes
+    13. Formularios
+    14. Panel de validación
+    15. Ficha del paciente (detalle)
+    16. Pantalla de login
+    17. Mensajes, estados vacíos y pie de página
+    18. Notificaciones flotantes
+    19. Atención: pasos e historial
+    20. Ajustes para celular
+   ===================================================================== */
+
+
+/* =====================================================================
+   1. TIPOGRAFÍA
+   Plus Jakarta Sans: letra moderna y legible. El archivo está dentro
+   del proyecto (carpeta fuentes), así funciona aunque no haya internet.
+   ===================================================================== */
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    src: url('../fuentes/plus-jakarta-sans.woff2') format('woff2');
+    font-weight: 200 800;      /* fuente variable: todos los grosores en un archivo */
+    font-style: normal;
+    font-display: swap;        /* muestra texto de inmediato mientras carga */
+}
+
+
+/* =====================================================================
+   2. PALETA DE COLORES
+   Variables CSS: se definen una vez y se reutilizan en todo el archivo.
+   Si quieres cambiar un color del sistema, se cambia solo aquí.
+   ===================================================================== */
+:root {
+    /* Colores de marca */
+    --h-marino: #0b2d4a;          /* azul marino: barra superior y títulos */
+    --h-marino-2: #16405f;
+    --h-turquesa: #0f9d8f;        /* verde agua: botones y acentos       */
+    --h-turquesa-osc: #0b7f74;
+    --h-turquesa-claro: #d7efec;
+    --h-menta: #eef8f6;           /* fondos suaves                       */
+
+    /* Colores neutros */
+    --h-fondo: #f3f7f9;           /* fondo general de la página          */
+    --h-borde: #e2ebef;
+    --h-texto: #15324a;
+    --h-texto-suave: #5d7385;
+
+    /* Colores de cada estado del paciente (texto / fondo) */
+    --estado-espera: #9a6408;     --estado-espera-fondo: #fff2d6;
+    --estado-atendido: #157a4f;   --estado-atendido-fondo: #dcf4e7;
+    --estado-derivado: #5b45b0;   --estado-derivado-fondo: #ece8fb;
+    --estado-alta: #1b62a8;       --estado-alta-fondo: #e1edfa;
+
+    /* Error */
+    --h-error: #c8364a;
+
+    /* Bootstrap usa estas variables: así toma nuestra letra y colores */
+    --bs-body-font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    --bs-body-color: var(--h-texto);
+    --bs-body-bg: var(--h-fondo);
+    --bs-link-color-rgb: 15, 157, 143;
+    --bs-border-radius: 12px;
+}
+
+
+/* =====================================================================
+   3. BASE DE LA PÁGINA
+   ===================================================================== */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;       /* el pie de página queda siempre abajo */
+    line-height: 1.6;
+    background-color: var(--h-fondo);
+}
+
+h1, h2, h3, h4, h5 {
+    color: var(--h-marino);
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.texto-suave { color: var(--h-texto-suave); }
+
+/* Textos largos: se cortan con "..." (el texto completo va en title) */
+.texto-corto {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Textos largos en la ficha: bajan de línea sin salirse de la tarjeta */
+.texto-ajustado { overflow-wrap: anywhere; }
+
+
+/* =====================================================================
+   4. ÍCONOS MÉDICOS (Healthicons)
+   Cada ícono es un archivo SVG. Lo usamos como "máscara": la forma del
+   ícono recorta un fondo pintado con el color del texto (currentColor).
+   Así un mismo ícono puede ser blanco, verde o azul según dónde esté.
+   Uso en HTML:  <span class="hi hi-atendido"></span>
+   ===================================================================== */
+.hi {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    flex-shrink: 0;
+    vertical-align: -0.25em;
+    background-color: currentColor;
+    -webkit-mask: var(--icono) center / contain no-repeat;
+            mask: var(--icono) center / contain no-repeat;
+}
+.hi-hospital      { --icono: url('../iconos/hospital.svg'); }
+.hi-fichas        { --icono: url('../iconos/fichas.svg'); }
+.hi-en-espera     { --icono: url('../iconos/en-espera.svg'); }
+.hi-atendido      { --icono: url('../iconos/atendido.svg'); }
+.hi-derivado      { --icono: url('../iconos/derivado.svg'); }
+.hi-pulsera       { --icono: url('../iconos/pulsera-paciente.svg'); }
+.hi-ingreso       { --icono: url('../iconos/ingreso.svg'); }
+.hi-contacto      { --icono: url('../iconos/contacto.svg'); }
+.hi-cardiograma   { --icono: url('../iconos/cardiograma.svg'); }
+.hi-seguro        { --icono: url('../iconos/seguro.svg'); }
+.hi-calendario    { --icono: url('../iconos/calendario.svg'); }
+.hi-perfil        { --icono: url('../iconos/perfil.svg'); }
+.hi-alta          { --icono: url('../iconos/alta.svg'); }
+
+
+/* =====================================================================
+   5. BARRA SUPERIOR (navegación)
+   ===================================================================== */
+.barra-superior {
+    background-color: var(--h-marino);
+    padding: 0.85rem 0;
+    position: sticky;             /* queda fija arriba al hacer scroll */
+    top: 0;
+    z-index: 1030;
+    box-shadow: 0 2px 14px rgba(11, 45, 74, 0.18);
+}
+
+/* Logo: cuadro verde agua con el ícono del hospital */
+.marca {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #fff;
+    text-decoration: none;
+}
+.marca:hover { color: #fff; }
+.marca-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--h-turquesa), #19c2b0);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+}
+.marca-nombre { font-weight: 750; font-size: 1.1rem; line-height: 1.1; }
+.marca-sub { font-size: 0.78rem; opacity: 0.7; }
+
+/* Enlaces del menú */
+.menu-principal { display: flex; gap: 0.35rem; }
+.menu-principal a {
+    color: rgba(255, 255, 255, 0.78);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s, color 0.15s;
+}
+.menu-principal a:hover { color: #fff; background-color: rgba(255, 255, 255, 0.08); }
+.menu-principal a.activo { color: #fff; background-color: rgba(255, 255, 255, 0.14); }
+
+/* Usuario conectado */
+.chip-usuario {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+
+/* =====================================================================
+   6. ENCABEZADO DE CADA PÁGINA
+   Franja clara con patrón de cruces médicas, título, descripción,
+   botón principal y una ilustración a la derecha.
+   ===================================================================== */
+.encabezado-pagina {
+    position: relative;
+    padding: 2.75rem 0 7rem;      /* abajo deja espacio para la línea y para que el contenido "suba" */
+    background:
+        url('../img/patron-medico.svg') repeat,
+        linear-gradient(180deg, #e3f4f1 0%, var(--h-fondo) 100%);
+    overflow: hidden;
+}
+
+/* Línea de electrocardiograma decorativa en la parte inferior */
+.encabezado-pagina::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 3.9rem;               /* justo sobre las tarjetas del contenido */
+    height: 46px;
+    background: url('../img/linea-cardiograma.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+
+.encabezado-pagina h1 { font-size: 2.1rem; margin-bottom: 0.4rem; }
+.encabezado-pagina .descripcion { color: var(--h-texto-suave); font-size: 1.05rem; max-width: 560px; }
+
+/* Ruta de navegación: Inicio / Pacientes / ... */
+.migas { font-size: 0.85rem; margin-bottom: 0.9rem; }
+.migas a { color: var(--h-turquesa-osc); text-decoration: none; font-weight: 600; }
+.migas span { color: var(--h-texto-suave); }
+
+.ilustracion-encabezado {
+    max-height: 190px;
+    width: auto;
+    max-width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+/* El contenido principal se superpone al encabezado (efecto de capas) */
+.contenido-principal {
+    position: relative;
+    z-index: 2;
+    margin-top: -3.5rem;
+    padding-bottom: 3rem;
+}
+
+
+/* =====================================================================
+   7. TARJETAS
+   ===================================================================== */
+.tarjeta {
+    background-color: #fff;
+    border: 1px solid var(--h-borde);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(11, 45, 74, 0.06);
+    padding: 2rem;
+}
+
+.tarjeta-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--h-marino);
+    margin-bottom: 1.25rem;
+}
+
+/* Burbuja de color con un ícono adentro */
+.burbuja-icono {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    background-color: var(--h-menta);
+    color: var(--h-turquesa);
+    flex-shrink: 0;
+}
+
+
+/* =====================================================================
+   8. TARJETAS DE ESTADÍSTICAS (resumen del listado)
+   ===================================================================== */
+.tarjeta-estadistica {
+    background-color: #fff;
+    border: 1px solid var(--h-borde);
+    border-radius: 18px;
+    padding: 1.35rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 10px 30px rgba(11, 45, 74, 0.06);
+    height: 100%;
+}
+.tarjeta-estadistica .burbuja-icono { width: 54px; height: 54px; font-size: 1.7rem; border-radius: 16px; }
+.tarjeta-estadistica .numero { font-size: 1.9rem; font-weight: 800; line-height: 1; color: var(--h-marino); }
+.tarjeta-estadistica .etiqueta { font-weight: 650; color: var(--h-texto); }
+.tarjeta-estadistica .ayuda { font-size: 0.8rem; color: var(--h-texto-suave); }
+
+/* Colores de la burbuja según el estado */
+.burbuja-total     { background-color: #e3eef6; color: var(--h-marino-2); }
+.burbuja-espera    { background-color: var(--estado-espera-fondo);   color: var(--estado-espera); }
+.burbuja-atendido  { background-color: var(--estado-atendido-fondo); color: var(--estado-atendido); }
+.burbuja-derivado  { background-color: var(--estado-derivado-fondo); color: var(--estado-derivado); }
+.burbuja-alta      { background-color: var(--estado-alta-fondo);     color: var(--estado-alta); }
+
+
+/* =====================================================================
+   9. ESTADOS DEL PACIENTE (píldoras de color con punto)
+   ===================================================================== */
+.pildora-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.pildora-estado::before {                 /* punto de color a la izquierda */
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+.estado-espera    { color: var(--estado-espera);   background-color: var(--estado-espera-fondo); }
+.estado-atendido  { color: var(--estado-atendido); background-color: var(--estado-atendido-fondo); }
+.estado-derivado  { color: var(--estado-derivado); background-color: var(--estado-derivado-fondo); }
+.estado-alta      { color: var(--estado-alta);     background-color: var(--estado-alta-fondo); }
+
+
+/* =====================================================================
+   10. AVATAR CON INICIALES (ej: "María José Pérez" -> "MP")
+   ===================================================================== */
+.avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 750;
+    font-size: 0.9rem;
+    background-color: var(--h-turquesa-claro);
+    color: var(--h-marino);
+    flex-shrink: 0;
+}
+.avatar-sm { width: 34px; height: 34px; font-size: 0.78rem; }
+.avatar-lg { width: 84px; height: 84px; font-size: 1.7rem; background: linear-gradient(135deg, var(--h-turquesa), #19c2b0); color: #fff; }
+.avatar-claro { background-color: rgba(255, 255, 255, 0.16); color: #fff; }
+
+
+/* =====================================================================
+   11. BOTONES
+   ===================================================================== */
+.btn { font-weight: 650; border-radius: 12px; padding: 0.65rem 1.25rem; }
+.btn-sm { padding: 0.4rem 0.8rem; border-radius: 10px; font-size: 0.85rem; }
+.btn-lg { padding: 0.85rem 1.6rem; }
+
+/* Botón principal del hospital */
+.btn-hospital {
+    background-color: var(--h-turquesa);
+    border-color: var(--h-turquesa);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(15, 157, 143, 0.28);
+}
+.btn-hospital:hover, .btn-hospital:focus-visible {
+    background-color: var(--h-turquesa-osc);
+    border-color: var(--h-turquesa-osc);
+    color: #fff;
+}
+.btn-hospital:disabled { background-color: var(--h-turquesa); border-color: var(--h-turquesa); opacity: 0.6; }
+
+/* Botón secundario claro */
+.btn-suave {
+    background-color: #fff;
+    border: 1px solid var(--h-borde);
+    color: var(--h-texto);
+}
+.btn-suave:hover { background-color: var(--h-menta); border-color: var(--h-turquesa-claro); color: var(--h-marino); }
+
+/* Botones de acción en la tabla (Ver / Editar / Eliminar) */
+.btn-accion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 650;
+    text-decoration: none;
+    border: 1px solid var(--h-borde);
+    background-color: #fff;
+    color: var(--h-texto);
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+.btn-accion:hover { border-color: var(--h-turquesa); color: var(--h-turquesa-osc); background-color: var(--h-menta); }
+.btn-accion.peligro:hover { border-color: var(--h-error); color: var(--h-error); background-color: #fdecee; }
+
+/* Variante solo con ícono (Editar / Eliminar en la tabla). El texto va en title y aria-label */
+.btn-accion.solo-icono { width: 36px; height: 36px; padding: 0; justify-content: center; }
+
+/* Botón "Cerrar sesión" sobre la barra azul */
+.btn-salir {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff;
+    padding: 0.5rem 1rem;
+}
+.btn-salir:hover { background-color: rgba(255, 255, 255, 0.2); color: #fff; }
+
+
+/* =====================================================================
+   12. TABLA Y TARJETAS DE PACIENTES (listado)
+   ===================================================================== */
+/* Barra de búsqueda y filtros */
+.barra-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+.buscador {
+    position: relative;
+    flex: 1 1 280px;
+    max-width: 420px;
+}
+.buscador .bi {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--h-texto-suave);
+}
+.buscador input { padding-left: 2.6rem; }
+
+/* Botones de filtro por estado (Todos / En espera / ...) */
+.filtros-estado { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.filtro {
+    border: 1px solid var(--h-borde);
+    background-color: #fff;
+    color: var(--h-texto-suave);
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.filtro:hover { border-color: var(--h-turquesa); color: var(--h-turquesa-osc); }
+.filtro.activo { background-color: var(--h-marino); border-color: var(--h-marino); color: #fff; }
+
+/* Tabla */
+.tabla-pacientes { margin-bottom: 0; }
+.tabla-pacientes thead th {
+    background-color: var(--h-menta);
+    color: var(--h-texto-suave);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 750;
+    padding: 0.9rem 1rem;
+    border-bottom: none;
+    white-space: nowrap;
+}
+.tabla-pacientes thead th:first-child { border-radius: 12px 0 0 12px; }
+.tabla-pacientes thead th:last-child  { border-radius: 0 12px 12px 0; }
+.tabla-pacientes tbody td {
+    padding: 1.05rem 0.85rem;
+    vertical-align: middle;
+    border-color: var(--h-borde);
+    white-space: nowrap;
+}
+.tabla-pacientes tbody tr:hover td { background-color: #f8fcfb; }
+.nombre-paciente { font-weight: 700; color: var(--h-marino); }
+.email-paciente  { font-size: 0.85rem; color: var(--h-texto-suave); }
+
+/* En celular la tabla se reemplaza por tarjetas (más fáciles de leer) */
+.tarjeta-paciente {
+    border: 1px solid var(--h-borde);
+    border-radius: 16px;
+    padding: 1.15rem;
+    background-color: #fff;
+}
+.tarjeta-paciente + .tarjeta-paciente { margin-top: 0.9rem; }
+
+/* Bloque avatar + nombre + email: min-width 0 permite que el texto
+   largo se corte con "..." en vez de empujar la tarjeta hacia afuera */
+.bloque-paciente, .bloque-paciente > div { min-width: 0; }
+.tarjeta-paciente .texto-corto { max-width: 100%; }
+
+/* En la tarjeta del celular los 3 botones se reparten el ancho */
+.tarjeta-paciente .acciones { display: flex; gap: 0.5rem; }
+.tarjeta-paciente .acciones .btn-accion { flex: 1; justify-content: center; }
+.tarjeta-paciente .datos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.tarjeta-paciente .datos small { display: block; color: var(--h-texto-suave); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+
+/* =====================================================================
+   13. FORMULARIOS
+   ===================================================================== */
+/* Cada formulario se divide en secciones con título e ícono */
+.seccion-formulario + .seccion-formulario {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px dashed var(--h-borde);
+}
+.seccion-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1.4rem;
+}
+.seccion-titulo h2 { font-size: 1.05rem; margin: 0; }
+.seccion-titulo p { margin: 0; font-size: 0.85rem; color: var(--h-texto-suave); }
+
+.form-label { font-weight: 650; color: var(--h-marino); margin-bottom: 0.45rem; }
+.form-control, .form-select {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border-color: #d5e1e6;
+    font-size: 1rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--h-turquesa);
+    box-shadow: 0 0 0 4px rgba(15, 157, 143, 0.15);
+}
+.form-text { color: var(--h-texto-suave); font-size: 0.82rem; }
+.obligatorio { color: var(--h-error); }
+
+/* Botones para completar el correo (@, @gmail.com...) */
+.atajos-email { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.6rem; }
+.atajo {
+    border: 1px solid var(--h-borde);
+    background-color: #fff;
+    color: var(--h-marino);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+.atajo:hover { border-color: var(--h-turquesa); background-color: var(--h-menta); }
+
+/* Contador de caracteres */
+.contador { font-size: 0.78rem; color: var(--h-texto-suave); white-space: nowrap; }
+.contador.limite { color: var(--estado-espera); font-weight: 700; }   /* llegó al tope: no deja escribir más */
+
+/* Fila de botones al final del formulario */
+.acciones-formulario {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--h-borde);
+}
+
+
+/* =====================================================================
+   14. PANEL DE VALIDACIÓN (columna derecha de crear / editar)
+   Muestra cada campo con su estado: pendiente, correcto o con error.
+   ===================================================================== */
+.panel-validacion { position: sticky; top: 100px; }
+.lista-validacion { list-style: none; padding: 0; margin: 0; }
+.lista-validacion li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--h-borde);
+}
+.lista-validacion li:last-child { border-bottom: none; }
+.lista-validacion .campo-nombre { font-weight: 700; font-size: 0.9rem; color: var(--h-marino); }
+.lista-validacion .campo-regla { font-size: 0.8rem; color: var(--h-texto-suave); }
+.marca-estado {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    background-color: #edf2f5;
+    color: #9aaab6;
+}
+.marca-estado.ok    { background-color: var(--estado-atendido-fondo); color: var(--estado-atendido); }
+.marca-estado.error { background-color: #fdecee; color: var(--h-error); }
+
+/* Barra de progreso: cuántos campos están correctos */
+.progreso-validacion { height: 8px; border-radius: 999px; background-color: #edf2f5; }
+.progreso-validacion .progress-bar { background-color: var(--h-turquesa); border-radius: 999px; transition: width 0.3s; }
+
+
+/* =====================================================================
+   15. FICHA DEL PACIENTE (detalle)
+   ===================================================================== */
+.cabecera-ficha {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.75rem;
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--h-borde);
+}
+.cabecera-ficha h2 { font-size: 1.6rem; margin: 0 0 0.25rem; }
+
+/* Grilla de datos: Edad, Fecha, Email, N° de ficha */
+.dato-ficha {
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+    padding: 1.1rem;
+    border-radius: 16px;
+    background-color: var(--h-menta);
+    height: 100%;
+}
+.dato-ficha small {
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--h-texto-suave);
+}
+.dato-ficha strong { font-size: 1.05rem; color: var(--h-marino); }
+.dato-ficha .burbuja-icono { background-color: #fff; }
+
+
+/* =====================================================================
+   16. PANTALLA DE LOGIN
+   Dos columnas: a la izquierda la marca e ilustración, a la derecha
+   el formulario. En celular la columna izquierda se achica arriba.
+   ===================================================================== */
+.login-pantalla {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+}
+
+/* Columna izquierda: degradado azul -> verde agua + patrón */
+.login-marca {
+    position: relative;
+    color: #fff;
+    padding: 3rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 2rem;
+    background:
+        url('../img/patron-medico.svg') repeat,
+        linear-gradient(150deg, var(--h-marino) 0%, #0e4f6e 55%, var(--h-turquesa) 130%);
+    overflow: hidden;
+}
+.login-marca h1 { color: #fff; font-size: 2.4rem; line-height: 1.15; margin-bottom: 1rem; }
+.login-marca .bajada { color: rgba(255, 255, 255, 0.78); font-size: 1.05rem; max-width: 460px; }
+
+/* La ilustración va dentro de una tarjeta clara para que resalte */
+.login-ilustracion {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.22);
+    max-width: 520px;
+}
+.login-ilustracion img { width: 100%; height: auto; display: block; }
+
+/* Lista de características (Fichas, Estados, Acceso seguro) */
+.login-caracteristicas { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.login-caracteristicas > span {   /* solo la etiqueta, no el ícono de adentro */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+/* Columna derecha: formulario centrado */
+.login-formulario {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    background-color: #fff;
+}
+.login-caja { width: 100%; max-width: 400px; }
+.login-caja h2 { font-size: 1.75rem; margin-bottom: 0.35rem; }
+
+/* Campo con ícono a la izquierda (usuario / contraseña) */
+.campo-con-icono { position: relative; }
+.campo-con-icono > .bi {
+    position: absolute;
+    left: 1rem;
+    top: 0.85rem;
+    color: var(--h-texto-suave);
+    font-size: 1.05rem;
+}
+.campo-con-icono .form-control { padding-left: 2.75rem; }
+
+/* Botón para ver/ocultar la contraseña */
+.boton-ver-clave {
+    position: absolute;
+    right: 0.6rem;
+    top: 0.45rem;
+    border: none;
+    background: none;
+    color: var(--h-texto-suave);
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+}
+.boton-ver-clave:hover { color: var(--h-marino); background-color: var(--h-menta); }
+
+
+/* =====================================================================
+   17. MENSAJES, ESTADOS VACÍOS Y PIE DE PÁGINA
+   ===================================================================== */
+.alert { border-radius: 14px; border: none; padding: 1rem 1.25rem; }
+.alert-danger  { background-color: #fdecee; color: #8e1d2e; }
+.alert-success { background-color: var(--estado-atendido-fondo); color: #0f5c3b; }
+.alert-warning { background-color: var(--estado-espera-fondo); color: #6f4a06; }
+.alert-info    { background-color: #e3eef6; color: var(--h-marino); }
+
+/* Bloque que se muestra cuando no hay datos o el paciente no existe */
+.estado-vacio { text-align: center; padding: 2.5rem 1rem; }
+.estado-vacio img { max-width: 220px; width: 100%; height: auto; margin-bottom: 1.5rem; }
+.estado-vacio h3 { font-size: 1.25rem; }
+
+.pie-pagina {
+    margin-top: auto;
+    padding: 1.75rem 0;
+    color: var(--h-texto-suave);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--h-borde);
+    background-color: #fff;
+}
+
+
+/* =====================================================================
+   18. NOTIFICACIONES FLOTANTES (esquina superior derecha)
+   Las crea la función notificar() de base.html y desaparecen solas.
+   ===================================================================== */
+.notificaciones {
+    position: fixed;
+    top: 88px;
+    right: 1.25rem;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-width: min(380px, calc(100vw - 2.5rem));
+}
+.notificacion {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 14px;
+    background-color: #fff;
+    border: 1px solid var(--h-borde);
+    border-left: 5px solid var(--h-turquesa);
+    box-shadow: 0 14px 34px rgba(11, 45, 74, 0.18);
+    font-size: 0.92rem;
+    font-weight: 600;
+    animation: entrar-notificacion 0.25s ease-out;
+    transition: opacity 0.3s, transform 0.3s;
+}
+.notificacion .bi { font-size: 1.15rem; line-height: 1.2; }
+.notificacion-exito       { border-left-color: var(--estado-atendido); }
+.notificacion-exito .bi   { color: var(--estado-atendido); }
+.notificacion-error       { border-left-color: var(--h-error); }
+.notificacion-error .bi   { color: var(--h-error); }
+.notificacion-advertencia { border-left-color: #e0a100; }
+.notificacion-advertencia .bi { color: var(--estado-espera); }
+.notificacion.saliendo    { opacity: 0; transform: translateX(20px); }
+@keyframes entrar-notificacion {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+
+/* =====================================================================
+   19. ATENCIÓN: PASOS (En Espera -> Atendido -> Derivado) E HISTORIAL
+   ===================================================================== */
+/* Barra de pasos */
+.pasos-atencion {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+}
+.paso {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--h-borde);
+    background-color: #fff;
+    color: var(--h-texto-suave);
+}
+.paso .burbuja-icono { width: 40px; height: 40px; font-size: 1.25rem; background-color: #edf2f5; color: #9aaab6; }
+.paso strong { display: block; color: inherit; font-size: 0.95rem; }
+.paso small { font-size: 0.75rem; }
+.paso.completado { border-color: var(--estado-atendido-fondo); background-color: #f4fbf7; color: var(--estado-atendido); }
+.paso.completado .burbuja-icono { background-color: var(--estado-atendido-fondo); color: var(--estado-atendido); }
+.paso.actual { border-color: var(--h-turquesa); background-color: var(--h-menta); color: var(--h-marino); box-shadow: 0 0 0 3px rgba(15, 157, 143, 0.15); }
+.paso.actual .burbuja-icono { background-color: var(--h-turquesa); color: #fff; }
+
+/* Botones para elegir el siguiente estado */
+.botones-avance { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
+/* Cada botón lleva el color de su estado (igual que las píldoras) */
+.boton-avance[data-estado="Derivado"]     { background-color: var(--estado-derivado); border-color: var(--estado-derivado); }
+.boton-avance[data-estado="Dado de alta"] { background-color: var(--estado-alta);     border-color: var(--estado-alta); }
+.boton-avance[data-estado="Derivado"], .boton-avance[data-estado="Dado de alta"] { box-shadow: 0 6px 16px rgba(13, 43, 69, 0.18); }
+.boton-avance[data-estado="Derivado"]:hover,
+.boton-avance[data-estado="Dado de alta"]:hover { filter: brightness(0.92); color: #fff; }
+
+/* Formulario para avanzar de estado */
+.avance-atencion {
+    border: 1px dashed var(--h-turquesa);
+    border-radius: 16px;
+    padding: 1.25rem;
+    background-color: #fbfefd;
+}
+
+/* Historial: línea de tiempo */
+.historial { list-style: none; padding: 0; margin: 0; }
+.historial li {
+    position: relative;
+    padding: 0 0 1.4rem 1.9rem;
+}
+.historial li::before {                 /* punto */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.35rem;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background-color: var(--h-turquesa);
+    box-shadow: 0 0 0 4px var(--h-menta);
+}
+.historial li::after {                  /* línea vertical */
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 1.2rem;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--h-borde);
+}
+.historial li:last-child { padding-bottom: 0; }
+.historial li:last-child::after { display: none; }
+.historial .meta { font-size: 0.8rem; color: var(--h-texto-suave); }
+.historial .texto { margin: 0.35rem 0 0; overflow-wrap: anywhere; }
+
+textarea.form-control { min-height: 110px; resize: vertical; }
+
+
+/* =====================================================================
+   20. AJUSTES PARA CELULAR Y TABLET
+   ===================================================================== */
+@media (max-width: 991.98px) {
+    .login-pantalla { grid-template-columns: 1fr; }
+    .login-marca { padding: 2rem 1.5rem; }
+    .login-marca h1 { font-size: 1.8rem; }
+    .login-ilustracion { display: none; }      /* en pantallas chicas se prioriza el formulario */
+    .panel-validacion { position: static; }
+}
+
+@media (max-width: 575.98px) {
+    .tarjeta { padding: 1.35rem; border-radius: 16px; }
+    .encabezado-pagina { padding: 1.75rem 0 6.75rem; }   /* deja espacio a la línea de electrocardiograma */
+    .encabezado-pagina h1 { font-size: 1.6rem; }
+    .marca-sub { display: none; }
+    .tarjeta-estadistica { padding: 1rem; gap: 0.7rem; }
+    .tarjeta-estadistica .burbuja-icono { width: 42px; height: 42px; font-size: 1.35rem; border-radius: 12px; }
+    .tarjeta-estadistica .numero { font-size: 1.6rem; }
+    .tarjeta-estadistica .etiqueta { font-size: 0.85rem; }
+    .tarjeta-paciente .acciones .btn-accion { padding: 0.45rem 0.4rem; }
+    .acciones-formulario .btn { flex: 1 1 100%; }
+    .pasos-atencion { grid-template-columns: 1fr; }
+    .botones-avance { width: 100%; }
+    .botones-avance .btn { flex: 1 1 100%; }      /* en celular, un botón por fila a lo ancho */
+}
