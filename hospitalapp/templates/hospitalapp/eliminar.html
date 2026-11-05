@@ -1,38 +1,136 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eliminar Paciente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light d-flex align-items-center min-vh-100">
-    <div class="container" style="max-width: 500px;">
-        <!-- border-danger dibuja un borde rojo alrededor de la tarjeta -->
-        <div class="card shadow border-danger">
-            <div class="card-body text-center p-5">
-                
-                <h1 class="text-danger mb-4">¡Atención!</h1>
-                <p class="fs-5">
-                    ¿Estás absolutamente seguro de que deseas eliminar los registros del paciente <br>
-                    <strong>{{ paciente.nombre_completo }}</strong> (RUT: {{ paciente.rut }})?
-                </p>
-                <p class="text-muted small mb-4">Esta acción no se puede deshacer y los datos se borrarán permanentemente de la base de datos MySQL.</p>
-                
-                <!-- Este formulario no tiene inputs, su único propósito es enviar una petición POST
-                     para que views.py ejecute la función paciente.delete() -->
-                <form method="POST">
-                    {% csrf_token %}
-                    <div class="d-flex justify-content-center gap-3">
-                        <!-- El botón cancelar es simplemente un enlace que te saca de aquí y no envía el form -->
-                        <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary px-4">No, volver a la lista</a>
-                        <!-- El submit confirma la petición POST -->
-                        <button type="submit" class="btn btn-danger px-4">Sí, eliminar paciente</button>
-                    </div>
-                </form>
-                
+{% extends 'hospitalapp/base.html' %}
+{% load static %}
+{% comment %} ====================================================================
+   ELIMINAR PACIENTE
+   1. Muestra los datos para confirmar:   GET    /api/pacientes/<id>/
+   2. Elimina al confirmar:               DELETE /api/pacientes/<id>/
+   ==================================================================== {% endcomment %}
+
+{% block titulo %}Eliminar paciente{% endblock %}
+
+{# ---------------- Encabezado de la página ---------------- #}
+{% block migas %}<span> / </span><a href="{% url 'listar_pacientes' %}">Pacientes</a><span> / Eliminar ficha #{{ id }}</span>{% endblock %}
+{% block titulo_pagina %}Eliminar ficha{% endblock %}
+{% block descripcion %}Esta acción no se puede deshacer.{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <section class="tarjeta text-center p-4 p-md-5">
+
+            <!-- Estado vacío: el paciente no existe -->
+            <div id="no-encontrado" class="estado-vacio p-0" hidden>
+                <img src="{% static 'hospitalapp/img/no-encontrado.svg' %}" alt="">
+                <h3>No encontramos esta ficha</h3>
+                <p class="texto-suave">El paciente no existe o ya fue eliminado.</p>
+                <a href="{% url 'listar_pacientes' %}" class="btn btn-hospital"><i class="bi bi-arrow-left me-1"></i> Volver al listado</a>
             </div>
-        </div>
+
+            <!-- Confirmación -->
+            <div id="confirmacion">
+                <img src="{% static 'hospitalapp/img/eliminar-registro.svg' %}" alt="" style="max-width: 210px; width: 100%;" class="mb-4">
+                <h2 class="h3">¿Eliminar esta ficha?</h2>
+                <p class="texto-suave">Se borrarán sus datos y su historial de atención.</p>
+
+                <!-- Datos del paciente (los rellena JavaScript) -->
+                <div class="d-flex align-items-center gap-3 text-start p-3 my-4 rounded-4" style="background-color: var(--h-menta);">
+                    <span id="avatar" class="avatar">…</span>
+                    <div class="flex-grow-1 texto-ajustado">
+                        <div class="fw-bold" id="nombre_completo">Cargando...</div>
+                        <div class="small texto-suave">RUT <span id="rut"></span></div>
+                    </div>
+                    <div id="estado"></div>
+                </div>
+
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{% url 'listar_pacientes' %}" class="btn btn-suave px-4">No, volver</a>
+                    <!-- disabled hasta que se carguen los datos -->
+                    <button type="button" id="btnEliminar" class="btn btn-danger px-4" disabled>
+                        <i class="bi bi-trash3 me-1"></i> Sí, eliminar ficha
+                    </button>
+                </div>
+            </div>
+
+            <div id="mensaje" class="mt-4 mb-0" role="status" aria-live="polite" hidden></div>
+        </section>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // El id viene de la vista de Django (la ruta <int:id> asegura que es un número)
+    const pacienteId = {{ id }};
+    const btnEliminar = document.getElementById('btnEliminar');
+    const mensaje = document.getElementById('mensaje');
+
+    // Muestra el estado vacío cuando el paciente no existe
+    function mostrarNoEncontrado() {
+        document.getElementById('confirmacion').hidden = true;
+        document.getElementById('no-encontrado').hidden = false;
+    }
+
+    // ---------------------------------------------------------------
+    // 1. Mostrar los datos:  GET /api/pacientes/<id>/
+    // ---------------------------------------------------------------
+    async function cargarPaciente() {
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`);
+            if (!respuesta) return;
+
+            if (respuesta.status === 404) return mostrarNoEncontrado();
+            if (!respuesta.ok) {
+                const datos = await leerJson(respuesta);
+                mostrarMensaje(mensaje, datos.error || 'No se pudo cargar la ficha.', 'danger');
+                return;
+            }
+
+            const paciente = await respuesta.json();
+            document.getElementById('avatar').textContent = iniciales(paciente.nombre_completo);
+            document.getElementById('nombre_completo').textContent = paciente.nombre_completo;
+            document.getElementById('rut').textContent = paciente.rut;
+            document.getElementById('estado').replaceChildren(crearPildoraEstado(paciente.estado));
+
+            btnEliminar.disabled = false;   // ya se puede eliminar
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensaje, 'No se pudo conectar con el servidor.', 'danger');
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 2. Eliminar al confirmar:  DELETE /api/pacientes/<id>/
+    // ---------------------------------------------------------------
+    btnEliminar.addEventListener('click', async function () {
+        btnEliminar.disabled = true;
+        mostrarMensaje(mensaje, 'Eliminando ficha...', 'info');
+
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`, 'DELETE');
+            if (!respuesta) return;
+            const resultado = await leerJson(respuesta);
+
+            if (respuesta.ok) {
+                // 200 OK: eliminado. Mostramos el mensaje que envía la API.
+                notificar(resultado.mensaje, 'exito');
+                mostrarMensaje(mensaje, resultado.mensaje + '. Volviendo al listado...', 'success');
+                setTimeout(() => window.location.href = '/pacientes/', 1000);
+            } else if (respuesta.status === 404) {
+                mensaje.hidden = true;
+                mostrarNoEncontrado();
+            } else {
+                mostrarMensaje(mensaje, resultado.error || 'No se pudo eliminar la ficha.', 'danger');
+                btnEliminar.disabled = false;
+            }
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensaje, 'Error de conexión con el servidor.', 'danger');
+            btnEliminar.disabled = false;
+        }
+    });
+
+    cargarPaciente();
+</script>
+{% endblock %}

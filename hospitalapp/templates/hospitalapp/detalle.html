@@ -1,0 +1,350 @@
+{% extends 'hospitalapp/base.html' %}
+{% load static %}
+{% comment %} ====================================================================
+   FICHA DEL PACIENTE (detalle)
+   1. Consulta el paciente y su historial:   GET   /api/pacientes/<id>/
+   2. Avanza el estado de la atención:       PATCH /api/pacientes/<id>/
+        {"estado": "Atendido", "detalle_atencion": "..."}
+      Orden obligatorio: En Espera -> Atendido -> Derivado  o  Dado de alta.
+      Cada avance exige escribir el detalle de la atención.
+      La API entrega "siguientes_estados" (lista) y se dibuja un botón por opción.
+   El id llega desde la URL (/detalle/5/) a través de la vista.
+   ==================================================================== {% endcomment %}
+
+{% block titulo %}Ficha del paciente{% endblock %}
+
+{# ---------------- Encabezado de la página ---------------- #}
+{% block migas %}<span> / </span><a href="{% url 'listar_pacientes' %}">Pacientes</a><span> / Ficha #{{ id }}</span>{% endblock %}
+{% block titulo_pagina %}Ficha del paciente{% endblock %}
+{% block ilustracion %}
+    <img src="{% static 'hospitalapp/img/detalle-paciente.svg' %}" class="ilustracion-encabezado" alt="Doctor atendiendo a una paciente">
+{% endblock %}
+
+{% block contenido %}
+<!-- Mientras carga o si hay un error -->
+<div id="mensaje" class="tarjeta" role="status" aria-live="polite">
+    <div class="d-flex align-items-center gap-2 texto-suave">
+        <span class="spinner-border spinner-border-sm"></span> Cargando ficha...
+    </div>
+</div>
+
+<!-- Estado vacío: el paciente no existe -->
+<section id="no-encontrado" class="tarjeta estado-vacio" hidden>
+    <img src="{% static 'hospitalapp/img/no-encontrado.svg' %}" alt="">
+    <h3>No encontramos esta ficha</h3>
+    <p class="texto-suave">El paciente no existe o fue eliminado.</p>
+    <a href="{% url 'listar_pacientes' %}" class="btn btn-hospital"><i class="bi bi-arrow-left me-1"></i> Volver al listado</a>
+</section>
+
+<div id="ficha" hidden>
+
+    <!-- ============================================================
+         DATOS DEL PACIENTE
+         ============================================================ -->
+    <section class="tarjeta">
+        <!-- Cabecera: avatar, nombre, RUT y estado actual -->
+        <div class="cabecera-ficha">
+            <span id="avatar" class="avatar avatar-lg"></span>
+            <div class="flex-grow-1">
+                <h2 id="nombre_completo" class="texto-ajustado"></h2>
+                <div class="texto-suave"><span class="hi hi-pulsera me-1"></span> RUT <strong id="rut"></strong></div>
+            </div>
+            <div id="estado"></div>
+        </div>
+
+        <!-- Datos en cuadros -->
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="dato-ficha">
+                    <span class="burbuja-icono"><span class="hi hi-perfil"></span></span>
+                    <div><small>Edad</small><strong id="edad"></strong><div class="small texto-suave" id="fecha_nacimiento"></div></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dato-ficha">
+                    <span class="burbuja-icono"><span class="hi hi-calendario"></span></span>
+                    <div><small>Fecha de ingreso</small><strong id="fecha_ingreso"></strong></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dato-ficha">
+                    <span class="burbuja-icono"><span class="hi hi-contacto"></span></span>
+                    <div><small>Teléfono</small><strong id="telefono"></strong></div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="dato-ficha">
+                    <span class="burbuja-icono"><i class="bi bi-envelope"></i></span>
+                    <div class="texto-ajustado"><small>Email</small><strong id="email_contacto"></strong></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dato-ficha">
+                    <span class="burbuja-icono"><span class="hi hi-fichas"></span></span>
+                    <div><small>N° de ficha</small><strong id="id"></strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="acciones-formulario">
+            <a href="{% url 'listar_pacientes' %}" class="btn btn-suave me-auto"><i class="bi bi-arrow-left me-1"></i> Volver</a>
+            <a href="{% url 'eliminar_paciente' id %}" class="btn btn-suave text-danger"><i class="bi bi-trash3 me-1"></i> Eliminar</a>
+            <a href="{% url 'editar_paciente' id %}" class="btn btn-hospital"><i class="bi bi-pencil me-1"></i> Editar datos</a>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         ATENCIÓN: pasos, avance de estado e historial
+         ============================================================ -->
+    <section class="tarjeta mt-4">
+        <div class="tarjeta-titulo">
+            <span class="burbuja-icono"><span class="hi hi-cardiograma"></span></span>
+            Atención
+        </div>
+
+        <!-- Pasos en orden: En Espera -> Atendido -> Derivado o Dado de alta.
+             data-paso es la posición; el paso 3 cambia de texto e ícono según
+             cómo terminó la atención (lo hace JavaScript). -->
+        <div class="pasos-atencion">
+            <div class="paso" data-paso="0">
+                <span class="burbuja-icono"><span class="hi hi-en-espera"></span></span>
+                <div><strong>En Espera</strong><small>Paso 1</small></div>
+            </div>
+            <div class="paso" data-paso="1">
+                <span class="burbuja-icono"><span class="hi hi-atendido"></span></span>
+                <div><strong>Atendido</strong><small>Paso 2</small></div>
+            </div>
+            <div class="paso" data-paso="2">
+                <span class="burbuja-icono"><span id="icono-paso-final" class="hi hi-derivado"></span></span>
+                <div><strong id="texto-paso-final">Derivado o Dado de alta</strong><small>Paso 3</small></div>
+            </div>
+        </div>
+
+        <!-- Formulario para avanzar de estado (con detalle obligatorio).
+             Hay UN botón por cada estado posible: desde "Atendido" aparecen
+             "Pasar a Derivado" y "Dar de alta". Ambos usan el mismo detalle. -->
+        <form id="formAvance" class="avance-atencion mb-4" novalidate hidden>
+            <label for="detalle_avance" class="form-label">
+                Detalle de la atención <span class="obligatorio">*</span>
+            </label>
+            <textarea id="detalle_avance" class="form-control" maxlength="300" data-contador="contador-avance"
+                      placeholder="Escribe el detalle de la atención" required></textarea>
+            <div class="invalid-feedback" id="error-detalle_avance"></div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+                <small id="contador-avance" class="contador"></small>
+                <!-- Los botones los crea JavaScript según "siguientes_estados" -->
+                <div id="botones-avance" class="botones-avance"></div>
+            </div>
+        </form>
+
+        <!-- Atención cerrada (fue derivado o dado de alta): el texto lo pone JavaScript -->
+        <div id="atencion-cerrada" class="alert alert-info mb-4" hidden>
+            <i class="bi bi-lock me-1"></i> <span id="texto-cerrada"></span>
+        </div>
+
+        <!-- Historial (la lista la llena JavaScript) -->
+        <h3 class="h6 text-uppercase texto-suave mb-3">Historial</h3>
+        <ul id="historial" class="historial"></ul>
+        <p id="historial-vacio" class="texto-suave small mb-0" hidden>Sin registros de atención.</p>
+    </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // El id viene de la vista de Django (la ruta <int:id> asegura que es un número)
+    const pacienteId = {{ id }};
+    const mensaje = document.getElementById('mensaje');
+
+    // Posición de cada estado en los pasos (los dos finales ocupan el paso 3)
+    const POSICION_ESTADO = { 'En Espera': 0, 'Atendido': 1, 'Derivado': 2, 'Dado de alta': 2 };
+
+    // Texto e ícono de cada botón de avance
+    const BOTON_ESTADO = {
+        'Atendido':     { texto: 'Pasar a Atendido', icono: 'bi-check2-circle' },
+        'Derivado':     { texto: 'Pasar a Derivado', icono: 'bi-arrow-up-right-circle' },
+        'Dado de alta': { texto: 'Dar de alta',      icono: 'bi-house-check' }
+    };
+
+    let pacienteActual = null;    // datos que entregó la API
+
+    // ---------------------------------------------------------------
+    // Dibujar la ficha con los datos de la API
+    // (siempre con textContent: seguro contra XSS)
+    // ---------------------------------------------------------------
+    function mostrarFicha(paciente) {
+        pacienteActual = paciente;
+
+        // Datos del paciente
+        document.getElementById('avatar').textContent = iniciales(paciente.nombre_completo);
+        document.getElementById('nombre_completo').textContent = paciente.nombre_completo;
+        document.getElementById('rut').textContent = paciente.rut;
+        document.getElementById('estado').replaceChildren(crearPildoraEstado(paciente.estado));
+        document.getElementById('edad').textContent =
+            paciente.edad === null ? 'Sin registrar' : paciente.edad + (paciente.edad === 1 ? ' año' : ' años');
+        document.getElementById('fecha_nacimiento').textContent =
+            paciente.fecha_nacimiento ? 'Nació el ' + formatearFecha(paciente.fecha_nacimiento) : '';
+        document.getElementById('fecha_ingreso').textContent = formatearFecha(paciente.fecha_ingreso);
+        document.getElementById('telefono').textContent = formatearTelefono(paciente.telefono);
+        document.getElementById('email_contacto').textContent = paciente.email_contacto;
+        document.getElementById('id').textContent = '#' + paciente.id;
+
+        // Pasos: completado (ya pasó), actual (está aquí) o pendiente
+        const posicionActual = POSICION_ESTADO[paciente.estado];
+        document.querySelectorAll('.paso').forEach(function (paso) {
+            const posicion = Number(paso.dataset.paso);
+            paso.classList.toggle('completado', posicion < posicionActual);
+            paso.classList.toggle('actual', posicion === posicionActual);
+        });
+
+        // Paso 3: muestra cómo terminó la atención (o las dos opciones si aún no llega)
+        const alta = paciente.estado === 'Dado de alta';
+        const derivado = paciente.estado === 'Derivado';
+        document.getElementById('texto-paso-final').textContent =
+            alta ? 'Dado de alta' : (derivado ? 'Derivado' : 'Derivado o Dado de alta');
+        document.getElementById('icono-paso-final').className = 'hi ' + (alta ? 'hi-alta' : 'hi-derivado');
+
+        // Avance: un botón por cada estado al que puede pasar
+        const siguientes = paciente.siguientes_estados;
+        const contenedor = document.getElementById('botones-avance');
+        contenedor.replaceChildren();
+        siguientes.forEach(function (estado) {
+            const datos = BOTON_ESTADO[estado];
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'btn btn-hospital boton-avance';
+            boton.dataset.estado = estado;
+            const icono = document.createElement('i');
+            icono.className = 'bi ' + datos.icono + ' me-1';
+            boton.append(icono, datos.texto);
+            boton.addEventListener('click', function () { avanzarEstado(estado); });
+            contenedor.appendChild(boton);
+        });
+        document.getElementById('formAvance').hidden = siguientes.length === 0;
+
+        // Atención cerrada: no hay más estados posibles
+        document.getElementById('atencion-cerrada').hidden = siguientes.length > 0;
+        document.getElementById('texto-cerrada').textContent =
+            'Atención cerrada: el paciente fue ' + (alta ? 'dado de alta.' : 'derivado.');
+
+        // Historial: del más reciente al más antiguo
+        const lista = document.getElementById('historial');
+        lista.replaceChildren();
+        [...paciente.historial].reverse().forEach(function (registro) {
+            const li = document.createElement('li');
+            const cabecera = document.createElement('div');
+            cabecera.className = 'd-flex flex-wrap align-items-center gap-2';
+            const meta = document.createElement('span');
+            meta.className = 'meta';
+            const [fecha, hora] = registro.fecha.split(' ');
+            meta.textContent = formatearFecha(fecha) + ' ' + hora +
+                (registro.registrado_por ? ' · registrado por ' + registro.registrado_por : '');
+            cabecera.append(crearPildoraEstado(registro.estado), meta);
+            const texto = document.createElement('p');
+            texto.className = 'texto';
+            texto.textContent = registro.detalle;
+            li.append(cabecera, texto);
+            lista.appendChild(li);
+        });
+        document.getElementById('historial-vacio').hidden = paciente.historial.length > 0;
+    }
+
+    // ---------------------------------------------------------------
+    // 1. Consultar la ficha:  GET /api/pacientes/<id>/
+    // ---------------------------------------------------------------
+    async function cargarFicha() {
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`);
+            if (!respuesta) return;
+
+            if (respuesta.status === 404) {
+                // 404: no existe -> estado vacío con botón para volver
+                mensaje.hidden = true;
+                document.getElementById('no-encontrado').hidden = false;
+                return;
+            }
+            if (!respuesta.ok) {
+                const datos = await leerJson(respuesta);
+                mostrarMensaje(mensaje, datos.error || 'No se pudo consultar la ficha.', 'danger');
+                return;
+            }
+
+            mostrarFicha(await respuesta.json());
+            mensaje.hidden = true;
+            document.getElementById('ficha').hidden = false;
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensaje, 'No se pudo conectar con el servidor.', 'danger');
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 2. Avanzar el estado:  PATCH /api/pacientes/<id>/
+    // ---------------------------------------------------------------
+    const campoDetalle = document.getElementById('detalle_avance');
+    const errorDetalle = document.getElementById('error-detalle_avance');
+
+    // Misma regla que el servidor: entre 10 y 300 caracteres
+    function validarDetalle() {
+        const detalle = campoDetalle.value.trim().replace(/\s+/g, ' ');
+        let error = '';
+        if (!detalle) error = 'Debes escribir el detalle de la atención.';
+        else if (detalle.length < 10) error = 'El detalle debe tener entre 10 y 300 caracteres.';
+        errorDetalle.textContent = error;
+        campoDetalle.classList.toggle('is-invalid', error !== '');
+        return error;
+    }
+    campoDetalle.addEventListener('input', function () {
+        if (campoDetalle.classList.contains('is-invalid')) validarDetalle();
+    });
+
+    // El formulario no se envía solo: cada botón llama a avanzarEstado()
+    document.getElementById('formAvance').addEventListener('submit', function (event) {
+        event.preventDefault();
+    });
+
+    // estadoNuevo: el estado del botón presionado ("Atendido", "Derivado" o "Dado de alta")
+    async function avanzarEstado(estadoNuevo) {
+        const error = validarDetalle();
+        if (error) { notificar(error, 'error'); campoDetalle.focus(); return; }
+
+        // Se desactivan todos los botones mientras responde la API (evita doble envío)
+        const botones = document.querySelectorAll('.boton-avance');
+        botones.forEach(function (b) { b.disabled = true; });
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`, 'PATCH', {
+                estado: estadoNuevo,
+                detalle_atencion: campoDetalle.value.trim()
+            });
+            if (!respuesta) return;
+            const resultado = await leerJson(respuesta);
+
+            if (respuesta.ok) {
+                // 200: estado actualizado y registrado en el historial
+                notificar(resultado.mensaje, 'exito');
+                campoDetalle.value = '';
+                campoDetalle.dispatchEvent(new Event('input'));
+                mostrarFicha(resultado.paciente);
+            } else {
+                // 400 (ej: detalle corto o estado fuera de orden) o 404
+                const errores = resultado.errores || {};
+                const texto = errores.detalle_atencion || errores.estado || resultado.error || 'No se pudo actualizar.';
+                if (errores.detalle_atencion) {
+                    errorDetalle.textContent = errores.detalle_atencion;
+                    campoDetalle.classList.add('is-invalid');
+                }
+                notificar(texto, 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            notificar('Error de conexión con el servidor.', 'error');
+        } finally {
+            botones.forEach(function (b) { b.disabled = false; });
+        }
+    }
+
+    cargarFicha();
+</script>
+{% endblock %}

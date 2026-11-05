@@ -1,10 +1,13 @@
 {% extends 'hospitalapp/base.html' %}
 {% load static %}
 {% comment %} ====================================================================
-   LISTADO DE PACIENTES (versión de la rama bejota)
-   Aquí los datos todavía llegan desde la vista listar_pacientes
-   (variable "pacientes") y se recorren con un ciclo for de Django.
-   En la rama zut esta página pasa a pedir los datos a la API con token.
+   LISTADO DE PACIENTES
+   La vista (listar_pacientes) solo muestra este HTML.
+   Los datos se piden con JavaScript a la API:
+        GET /api/pacientes/      (con el token en el encabezado)
+   Con esos datos se arman: el resumen por estado, la tabla
+   (computador) y las tarjetas (celular). El buscador y los filtros
+   trabajan sobre los datos ya recibidos, sin volver a llamar a la API.
    ==================================================================== {% endcomment %}
 
 {% block titulo %}Pacientes{% endblock %}
@@ -12,7 +15,6 @@
 {# ---------------- Encabezado de la página ---------------- #}
 {% block migas %}<span> / Pacientes</span>{% endblock %}
 {% block titulo_pagina %}Pacientes registrados{% endblock %}
-{% block descripcion %}Consulta las fichas, revisa su estado de atención y mantén la información al día.{% endblock %}
 {% block acciones_encabezado %}
     <a href="{% url 'crear_paciente' %}" class="btn btn-hospital mt-4">
         <i class="bi bi-plus-lg me-1"></i> Registrar paciente
@@ -23,8 +25,88 @@
 {% endblock %}
 
 {% block contenido %}
+
+<!-- ================================================================
+     RESUMEN: cantidad de pacientes por estado (5 tarjetas).
+     col-xl: en pantallas grandes las 5 quedan en una sola fila.
+     ================================================================ -->
+<div class="row g-3 g-lg-4 mb-4">
+    <div class="col-12 col-md-4 col-xl">
+        <div class="tarjeta-estadistica">
+            <span class="burbuja-icono burbuja-total"><span class="hi hi-fichas"></span></span>
+            <div>
+                <div class="numero" id="total">–</div>
+                <div class="etiqueta">Total</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="tarjeta-estadistica">
+            <span class="burbuja-icono burbuja-espera"><span class="hi hi-en-espera"></span></span>
+            <div>
+                <div class="numero" id="total-espera">–</div>
+                <div class="etiqueta">En espera</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="tarjeta-estadistica">
+            <span class="burbuja-icono burbuja-atendido"><span class="hi hi-atendido"></span></span>
+            <div>
+                <div class="numero" id="total-atendido">–</div>
+                <div class="etiqueta">Atendidos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="tarjeta-estadistica">
+            <span class="burbuja-icono burbuja-derivado"><span class="hi hi-derivado"></span></span>
+            <div>
+                <div class="numero" id="total-derivado">–</div>
+                <div class="etiqueta">Derivados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl">
+        <div class="tarjeta-estadistica">
+            <span class="burbuja-icono burbuja-alta"><span class="hi hi-alta"></span></span>
+            <div>
+                <div class="numero" id="total-alta">–</div>
+                <div class="etiqueta">De alta</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     LISTA DE PACIENTES
+     ================================================================ -->
 <section class="tarjeta">
-    <div class="table-responsive">
+
+    <!-- Buscador y filtros por estado -->
+    <div class="barra-filtros">
+        <div class="buscador">
+            <i class="bi bi-search"></i>
+            <input type="search" id="buscador" class="form-control" maxlength="100"
+                   placeholder="Buscar por nombre o RUT" aria-label="Buscar paciente">
+        </div>
+        <div class="filtros-estado" role="group" aria-label="Filtrar por estado">
+            <button type="button" class="filtro activo" data-estado="">Todos</button>
+            <button type="button" class="filtro" data-estado="En Espera">En espera</button>
+            <button type="button" class="filtro" data-estado="Atendido">Atendidos</button>
+            <button type="button" class="filtro" data-estado="Derivado">Derivados</button>
+            <button type="button" class="filtro" data-estado="Dado de alta">De alta</button>
+        </div>
+    </div>
+
+    <!-- Cuántos pacientes se están mostrando -->
+    <p id="contador-resultados" class="texto-suave small mb-3"></p>
+
+    <!-- Mensaje de error (si la API falla) -->
+    <div id="mensaje" role="status" aria-live="polite" hidden></div>
+
+    <!-- TABLA: solo en pantallas medianas y grandes (d-none d-md-block) -->
+    <div class="table-responsive d-none d-md-block">
         <table class="table tabla-pacientes align-middle">
             <thead>
                 <tr>
@@ -36,51 +118,232 @@
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Recorremos los pacientes enviados desde views.py -->
-                {% for paciente in pacientes %}
-                <tr>
-                    <td>
-                        <div class="bloque-paciente d-flex align-items-center gap-3">
-                            <!-- Avatar con la primera letra del nombre -->
-                            <span class="avatar">{{ paciente.nombre_completo|slice:":1"|upper }}</span>
-                            <div>
-                                <!-- texto-corto: corta textos largos con "..."; title muestra el texto completo -->
-                                <div class="nombre-paciente texto-corto" title="{{ paciente.nombre_completo }}">{{ paciente.nombre_completo }}</div>
-                                <div class="email-paciente texto-corto" title="{{ paciente.email_contacto }}">{{ paciente.email_contacto }}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>{{ paciente.rut }}</td>
-                    <td>{{ paciente.edad }} años</td>
-                    <td>{{ paciente.fecha_ingreso|date:'d-m-Y' }}</td>
-                    <td>
-                        <!-- Color de la píldora según el estado -->
-                        <span class="pildora-estado {% if paciente.estado == 'Atendido' %}estado-atendido{% elif paciente.estado == 'En Espera' %}estado-espera{% else %}estado-derivado{% endif %}">
-                            {{ paciente.estado }}
-                        </span>
-                    </td>
-                    <td class="text-end">
-                        <div class="d-inline-flex gap-2">
-                            <a href="{% url 'editar_paciente' paciente.pk %}" class="btn-accion"><i class="bi bi-pencil"></i> Editar</a>
-                            <a href="{% url 'eliminar_paciente' paciente.pk %}" class="btn-accion peligro"><i class="bi bi-trash3"></i> Eliminar</a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <!-- Se muestra si no hay pacientes en la base de datos -->
-                <tr>
-                    <td colspan="6">
-                        <div class="estado-vacio">
-                            <img src="{% static 'hospitalapp/img/sin-pacientes.svg' %}" alt="">
-                            <h3>Aún no hay pacientes registrados</h3>
-                            <p class="texto-suave">Cuando registres el primer paciente, aparecerá aquí.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
+            <tbody id="tabla-pacientes">
+                <tr><td colspan="6" class="text-center texto-suave py-5">Cargando pacientes...</td></tr>
             </tbody>
         </table>
     </div>
+
+    <!-- TARJETAS: solo en celular (d-md-none) -->
+    <div id="tarjetas-pacientes" class="d-md-none"></div>
+
+    <!-- ESTADO VACÍO: cuando no hay pacientes o la búsqueda no encuentra nada -->
+    <div id="estado-vacio" class="estado-vacio" hidden>
+        <img src="{% static 'hospitalapp/img/sin-pacientes.svg' %}" alt="">
+        <h3 id="vacio-titulo">Aún no hay pacientes registrados</h3>
+        <p id="vacio-texto" class="texto-suave">Cuando registres el primer paciente, aparecerá aquí.</p>
+        <a id="vacio-boton" href="{% url 'crear_paciente' %}" class="btn btn-hospital">
+            <i class="bi bi-plus-lg me-1"></i> Registrar paciente
+        </a>
+    </div>
 </section>
+{% endblock %}
+
+{% block script %}
+<script>
+    // ---------------------------------------------------------------
+    // Referencias a los elementos de la página
+    // ---------------------------------------------------------------
+    const tabla = document.getElementById('tabla-pacientes');
+    const tarjetas = document.getElementById('tarjetas-pacientes');
+    const estadoVacio = document.getElementById('estado-vacio');
+    const contadorResultados = document.getElementById('contador-resultados');
+    const buscador = document.getElementById('buscador');
+    const mensaje = document.getElementById('mensaje');
+
+    let pacientes = [];        // todos los pacientes que entregó la API
+    let filtroEstado = '';     // '' = todos
+
+    // ---------------------------------------------------------------
+    // Funciones pequeñas para crear elementos HTML de forma segura
+    // (siempre con textContent, nunca con innerHTML -> evita XSS)
+    // ---------------------------------------------------------------
+    function crear(etiqueta, clase, texto) {
+        const elemento = document.createElement(etiqueta);
+        if (clase) elemento.className = clase;
+        if (texto !== undefined) elemento.textContent = texto;
+        return elemento;
+    }
+
+    // Botón de acción. Si soloIcono es true, el texto queda en el tooltip
+    // (title) y en aria-label (lo leen los lectores de pantalla).
+    function botonAccion(texto, icono, url, { peligro = false, soloIcono = false } = {}) {
+        const a = crear('a', 'btn-accion' + (peligro ? ' peligro' : '') + (soloIcono ? ' solo-icono' : ''));
+        a.href = url;
+        a.title = texto;
+        a.setAttribute('aria-label', texto);
+        a.append(crear('i', 'bi ' + icono));
+        if (!soloIcono) a.append(texto);
+        return a;
+    }
+
+    // Acciones de cada paciente: "Ver ficha" con texto (acción principal),
+    // Editar y Eliminar como íconos en la tabla; con texto en celular.
+    function botonesAcciones(paciente, soloIcono) {
+        return [
+            botonAccion('Ver ficha', 'bi-eye', `/detalle/${paciente.id}/`),
+            botonAccion('Editar', 'bi-pencil', `/editar/${paciente.id}/`, { soloIcono }),
+            botonAccion('Eliminar', 'bi-trash3', `/eliminar/${paciente.id}/`, { peligro: true, soloIcono })
+        ];
+    }
+
+    // Edad calculada por la API desde la fecha de nacimiento
+    // (los pacientes antiguos pueden no tenerla registrada)
+    function textoEdad(paciente) {
+        return paciente.edad === null ? 'Sin registrar' : paciente.edad + (paciente.edad === 1 ? ' año' : ' años');
+    }
+
+    // Avatar redondo con iniciales + nombre + email
+    function bloquePaciente(paciente) {
+        const contenedor = crear('div', 'bloque-paciente d-flex align-items-center gap-3');
+        const textos = crear('div');
+        const nombre = crear('div', 'nombre-paciente texto-corto', paciente.nombre_completo);
+        const email = crear('div', 'email-paciente texto-corto', paciente.email_contacto);
+        nombre.title = paciente.nombre_completo;     // texto completo al pasar el mouse
+        email.title = paciente.email_contacto;
+        textos.append(nombre, email);
+        contenedor.append(crear('span', 'avatar', iniciales(paciente.nombre_completo)), textos);
+        return contenedor;
+    }
+
+    // ---------------------------------------------------------------
+    // Fila de la TABLA (computador)
+    // ---------------------------------------------------------------
+    function crearFila(paciente) {
+        const tr = crear('tr');
+        const celdaPaciente = crear('td');
+        celdaPaciente.append(bloquePaciente(paciente));
+
+        const celdaEstado = crear('td');
+        celdaEstado.append(crearPildoraEstado(paciente.estado));
+
+        const celdaAcciones = crear('td', 'text-end');
+        const grupo = crear('div', 'd-inline-flex gap-2');
+        grupo.append(...botonesAcciones(paciente, true));
+        celdaAcciones.append(grupo);
+
+        tr.append(
+            celdaPaciente,
+            crear('td', '', paciente.rut),
+            crear('td', '', textoEdad(paciente)),
+            crear('td', '', formatearFecha(paciente.fecha_ingreso)),
+            celdaEstado,
+            celdaAcciones
+        );
+        return tr;
+    }
+
+    // ---------------------------------------------------------------
+    // TARJETA (celular)
+    // ---------------------------------------------------------------
+    function crearTarjeta(paciente) {
+        const tarjeta = crear('article', 'tarjeta-paciente');
+
+        // Cabecera: avatar + nombre + email, y debajo el estado
+        const cabecera = crear('div');
+        const estado = crear('div', 'mt-3');
+        estado.append(crearPildoraEstado(paciente.estado));
+        cabecera.append(bloquePaciente(paciente), estado);
+
+        const datos = crear('div', 'datos');
+        [['RUT', paciente.rut], ['Edad', textoEdad(paciente)], ['Ingreso', formatearFecha(paciente.fecha_ingreso)]]
+            .forEach(function ([titulo, valor]) {
+                const dato = crear('div');
+                dato.append(crear('small', '', titulo), valor);
+                datos.append(dato);
+            });
+
+        const acciones = crear('div', 'acciones');
+        acciones.append(...botonesAcciones(paciente, false));
+
+        tarjeta.append(cabecera, datos, acciones);
+        return tarjeta;
+    }
+
+    // ---------------------------------------------------------------
+    // Resumen por estado (tarjetas de arriba)
+    // ---------------------------------------------------------------
+    function actualizarResumen() {
+        const contar = (estado) => pacientes.filter(p => p.estado === estado).length;
+        document.getElementById('total').textContent = pacientes.length;
+        document.getElementById('total-espera').textContent = contar('En Espera');
+        document.getElementById('total-atendido').textContent = contar('Atendido');
+        document.getElementById('total-derivado').textContent = contar('Derivado');
+        document.getElementById('total-alta').textContent = contar('Dado de alta');
+    }
+
+    // ---------------------------------------------------------------
+    // Dibujar la lista aplicando el buscador y el filtro de estado
+    // ---------------------------------------------------------------
+    function dibujarLista() {
+        const texto = buscador.value.trim().toLowerCase();
+
+        const visibles = pacientes.filter(function (p) {
+            const coincideTexto = !texto
+                || p.nombre_completo.toLowerCase().includes(texto)
+                || p.rut.toLowerCase().includes(texto);
+            const coincideEstado = !filtroEstado || p.estado === filtroEstado;
+            return coincideTexto && coincideEstado;
+        });
+
+        tabla.replaceChildren(...visibles.map(crearFila));
+        tarjetas.replaceChildren(...visibles.map(crearTarjeta));
+        contadorResultados.textContent = `Mostrando ${visibles.length} de ${pacientes.length} pacientes`;
+
+        // Estado vacío: sin pacientes en el sistema, o búsqueda sin resultados
+        const sinResultados = visibles.length === 0;
+        estadoVacio.hidden = !sinResultados;
+        document.querySelector('.table-responsive').classList.toggle('d-md-block', !sinResultados);
+        if (sinResultados) {
+            const hayPacientes = pacientes.length > 0;
+            document.getElementById('vacio-titulo').textContent = hayPacientes
+                ? 'No hay pacientes que coincidan' : 'Aún no hay pacientes registrados';
+            document.getElementById('vacio-texto').textContent = hayPacientes
+                ? 'Prueba con otro nombre, RUT o estado.' : 'Cuando registres el primer paciente, aparecerá aquí.';
+            document.getElementById('vacio-boton').hidden = hayPacientes;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Eventos del buscador y de los botones de filtro
+    // ---------------------------------------------------------------
+    buscador.addEventListener('input', dibujarLista);
+
+    document.querySelectorAll('.filtro').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            document.querySelectorAll('.filtro').forEach(b => b.classList.remove('activo'));
+            boton.classList.add('activo');
+            filtroEstado = boton.dataset.estado;
+            dibujarLista();
+        });
+    });
+
+    // ---------------------------------------------------------------
+    // CONSULTAR LA API:  GET /api/pacientes/
+    // ---------------------------------------------------------------
+    async function cargarPacientes() {
+        try {
+            const respuesta = await llamarApi('/api/pacientes/');   // ver base.html
+            if (!respuesta) return;                                 // sin sesión: ya se fue al login
+
+            if (!respuesta.ok) {
+                const datos = await leerJson(respuesta);
+                tabla.replaceChildren();
+                mostrarMensaje(mensaje, datos.error || 'No se pudo consultar la lista de pacientes.', 'danger');
+                return;
+            }
+
+            pacientes = await respuesta.json();   // arreglo de pacientes en JSON
+            actualizarResumen();
+            dibujarLista();
+
+        } catch (error) {
+            console.error('Error al cargar pacientes:', error);
+            tabla.replaceChildren();
+            mostrarMensaje(mensaje, 'No se pudo conectar con el servidor.', 'danger');
+        }
+    }
+
+    cargarPacientes();
+</script>
 {% endblock %}

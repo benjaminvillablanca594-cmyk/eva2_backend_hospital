@@ -247,6 +247,79 @@
         }
     </script>
 
+    <!-- ================================================================
+         FUNCIONES JAVASCRIPT COMPARTIDAS: API DE PACIENTES
+         ================================================================ -->
+    <script>
+        // ---------------------------------------------------------------
+        // llamarApi(url, metodo, cuerpo): hace un fetch a la API con el
+        // encabezado  Authorization: Token <clave>.
+        //  - Si se envía "cuerpo", va como JSON.
+        //  - Si la API responde 401/403 (token malo), vuelve al login.
+        // Devuelve la respuesta, o null si no hay sesión válida.
+        // ---------------------------------------------------------------
+        async function llamarApi(url, metodo = 'GET', cuerpo = null) {
+            const token = obtenerToken();
+            if (!token) return null;
+
+            const opciones = {
+                method: metodo,
+                headers: { 'Authorization': `Token ${token}` }
+            };
+
+            if (cuerpo !== null) {
+                opciones.headers['Content-Type'] = 'application/json';
+                opciones.body = JSON.stringify(cuerpo);
+            }
+
+            const respuesta = await fetch(url, opciones);
+
+            if (respuesta.status === 401 || respuesta.status === 403) {
+                sesionInvalida();
+                return null;
+            }
+            return respuesta;
+        }
+
+        // leerJson(respuesta): lee el JSON sin fallar si viene vacío o no es JSON
+        async function leerJson(respuesta) {
+            try {
+                return await respuesta.json();
+            } catch (error) {
+                return {};
+            }
+        }
+
+        // formatearFecha("2026-10-29") -> "29-10-2026"
+        function formatearFecha(fechaIso) {
+            const [anio, mes, dia] = fechaIso.split('-');
+            return `${dia}-${mes}-${anio}`;
+        }
+
+        // formatearTelefono("+56912345678") -> "+56 9 1234 5678"
+        function formatearTelefono(telefono) {
+            if (!telefono) return 'Sin registrar';
+            const n = telefono.replace('+56', '');
+            return `+56 ${n[0]} ${n.slice(1, 5)} ${n.slice(5)}`;
+        }
+
+        // Clase CSS e ícono de cada estado (ver sección 9 de estilos.css)
+        const ESTILO_ESTADO = {
+            'En Espera': 'estado-espera',
+            'Atendido': 'estado-atendido',
+            'Derivado': 'estado-derivado',
+            'Dado de alta': 'estado-alta'
+        };
+
+        // crearPildoraEstado("Atendido") -> <span class="pildora-estado estado-atendido">Atendido</span>
+        function crearPildoraEstado(estado) {
+            const pildora = document.createElement('span');
+            pildora.className = 'pildora-estado ' + (ESTILO_ESTADO[estado] || '');
+            pildora.textContent = estado;
+            return pildora;
+        }
+    </script>
+
     <!-- JavaScript propio de cada página -->
     {% block script %}{% endblock %}
 </body>

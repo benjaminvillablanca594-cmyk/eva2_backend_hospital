@@ -1,68 +1,157 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Paciente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light d-flex align-items-center min-vh-100">
-    <div class="container" style="max-width: 600px;">
-        <div class="card shadow">
-            <div class="card-header bg-warning text-dark text-center">
-                <!-- Mostramos el nombre del paciente actual en el título de la tarjeta -->
-                <h3 class="mb-0">Editando a: {{ paciente.nombre_completo }}</h3>
+{% extends 'hospitalapp/base.html' %}
+{% load static %}
+{% comment %} ====================================================================
+   EDITAR PACIENTE
+   1. Carga los datos actuales:   GET /api/pacientes/<id>/
+   2. Guarda TODOS los datos:     PUT /api/pacientes/<id>/
+   El ESTADO no se edita aquí: avanza desde la ficha del paciente
+   (En Espera -> Atendido -> Derivado) con su detalle de atención.
+   El id llega desde la URL (/editar/5/) a través de la vista.
+   ==================================================================== {% endcomment %}
+
+{% block titulo %}Editar paciente{% endblock %}
+
+{# ---------------- Encabezado de la página ---------------- #}
+{% block migas %}<span> / </span><a href="{% url 'listar_pacientes' %}">Pacientes</a><span> / Editar ficha #{{ id }}</span>{% endblock %}
+{% block titulo_pagina %}Editar datos del paciente{% endblock %}
+{% block ilustracion %}
+    <img src="{% static 'hospitalapp/img/editar-ficha.svg' %}" class="ilustracion-encabezado" alt="Doctora revisando exámenes">
+{% endblock %}
+
+{% block contenido %}
+<div class="row g-4">
+
+    <!-- COLUMNA IZQUIERDA: formulario -->
+    <div class="col-lg-8">
+        <section class="tarjeta">
+
+            <!-- Mientras carga o si hay un error -->
+            <div id="mensaje" role="status" aria-live="polite">
+                <div class="d-flex align-items-center gap-2 texto-suave">
+                    <span class="spinner-border spinner-border-sm"></span> Cargando ficha...
+                </div>
             </div>
-            <div class="card-body p-4">
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">RUT:</label>
-                        <!-- La gran diferencia con el 'crear' es que usamos el atributo 'value' para rellenar 
-                             la caja de texto con los datos que llegaron desde la base de datos ({{ paciente.rut }}) -->
-                        <input type="text" name="rut" class="form-control" value="{{ paciente.rut }}" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre Completo:</label>
-                        <input type="text" name="nombre_completo" class="form-control" value="{{ paciente.nombre_completo }}" required>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Edad:</label>
-                            <input type="number" name="edad" class="form-control" value="{{ paciente.edad }}" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha de Ingreso:</label>
-                            <!-- El filtro |date:'Y-m-d' formatea la fecha para que el input type="date" pueda leerla correctamente -->
-                            <input type="date" name="fecha_ingreso" class="form-control" value="{{ paciente.fecha_ingreso|date:'Y-m-d' }}" required>
-                        </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Email de Contacto:</label>
-                        <input type="email" name="email_contacto" class="form-control" value="{{ paciente.email_contacto }}" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Estado del Paciente:</label>
-                        <select name="estado" class="form-select">
-                            <!-- Utilizamos un if en la misma línea para colocar el atributo 'selected' al estado original -->
-                            <option value="En Espera" {% if paciente.estado == 'En Espera' %}selected{% endif %}>En Espera</option>
-                            <option value="Atendido" {% if paciente.estado == 'Atendido' %}selected{% endif %}>Atendido</option>
-                            <option value="Derivado" {% if paciente.estado == 'Derivado' %}selected{% endif %}>Derivado</option>
-                        </select>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning fw-bold text-dark">Actualizar Datos</button>
-                        <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary">Cancelar</a>
-                    </div>
-                </form>
+            <!-- Estado vacío: el paciente no existe -->
+            <div id="no-encontrado" class="estado-vacio" hidden>
+                <img src="{% static 'hospitalapp/img/no-encontrado.svg' %}" alt="">
+                <h3>No encontramos esta ficha</h3>
+                <p class="texto-suave">El paciente no existe o fue eliminado.</p>
+                <a href="{% url 'listar_pacientes' %}" class="btn btn-hospital"><i class="bi bi-arrow-left me-1"></i> Volver al listado</a>
             </div>
-        </div>
+
+            <!-- El formulario aparece cuando la API entrega los datos.
+                 data-paciente-id: lo usa la revisión de RUT repetido para no
+                 contar al propio paciente. -->
+            <form id="formPaciente" data-paciente-id="{{ id }}" novalidate hidden>
+
+                <!-- Campos compartidos con crear.html (sin la sección Atención) -->
+                {% include 'hospitalapp/_formulario_paciente.html' %}
+
+                <div id="mensaje-guardado" class="mt-4" role="status" aria-live="polite" hidden></div>
+
+                <!-- Botones -->
+                <div class="acciones-formulario">
+                    <a href="{% url 'detalle_paciente' id %}" class="btn btn-suave me-auto">Volver a la ficha</a>
+                    <button type="submit" id="btnPut" class="btn btn-hospital">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </section>
     </div>
-</body>
-</html>
+
+    <!-- COLUMNA DERECHA: panel de validación en vivo -->
+    <div class="col-lg-4">
+        {% include 'hospitalapp/_panel_validacion.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // El id viene de la vista de Django (la ruta <int:id> asegura que es un número)
+    const pacienteId = {{ id }};
+
+    const formulario = document.getElementById('formPaciente');
+    const mensaje = document.getElementById('mensaje');
+    const mensajeGuardado = document.getElementById('mensaje-guardado');
+    const btnPut = document.getElementById('btnPut');
+
+    // ---------------------------------------------------------------
+    // 1. CARGAR los datos actuales:  GET /api/pacientes/<id>/
+    // ---------------------------------------------------------------
+    async function cargarPaciente() {
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`);
+            if (!respuesta) return;
+
+            if (respuesta.status === 404) {
+                // 404: el paciente no existe -> estado vacío con botón para volver
+                mensaje.hidden = true;
+                document.getElementById('no-encontrado').hidden = false;
+                return;
+            }
+            if (!respuesta.ok) {
+                const datos = await leerJson(respuesta);
+                mostrarMensaje(mensaje, datos.error || 'No se pudo cargar la ficha.', 'danger');
+                return;
+            }
+
+            const paciente = await respuesta.json();
+            cargarDatosPaciente(paciente);                  // rellena el formulario
+            CAMPOS_PACIENTE.forEach(validarCampo);          // marca en verde los datos actuales
+                                                            // (y en rojo lo que falte, ej: teléfono)
+            mensaje.hidden = true;
+            formulario.hidden = false;
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensaje, 'No se pudo conectar con el servidor.', 'danger');
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 2. GUARDAR:  PUT /api/pacientes/<id>/  con TODOS los datos
+    // ---------------------------------------------------------------
+    formulario.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const errores = validarFormulario();
+        if (Object.keys(errores).length > 0) return;
+
+        mostrarMensaje(mensajeGuardado, 'Guardando cambios...', 'info');
+        btnPut.disabled = true;
+
+        try {
+            const respuesta = await llamarApi(`/api/pacientes/${pacienteId}/`, 'PUT', leerDatosPaciente());
+            if (!respuesta) return;
+            const resultado = await leerJson(respuesta);
+
+            if (respuesta.ok) {
+                // 200 OK: cambios guardados en MySQL. Mostramos el mensaje de la API.
+                notificar(resultado.mensaje, 'exito');
+                mostrarMensaje(mensajeGuardado, resultado.mensaje + '. Volviendo a la ficha...', 'success');
+                setTimeout(() => window.location.href = `/detalle/${pacienteId}/`, 1200);
+
+            } else if (respuesta.status === 400) {
+                // 400: datos inválidos (ej: el RUT ya lo tiene otro paciente)
+                mensajeGuardado.hidden = true;
+                mostrarErroresServidor(resultado.errores || { general: resultado.error });
+
+            } else {
+                // 404 u otro error: mensaje que envía la API
+                mostrarMensaje(mensajeGuardado, resultado.error || 'No se pudo guardar.', 'danger');
+                notificar(resultado.error || 'No se pudo guardar.', 'error');
+            }
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensajeGuardado, 'Error de conexión con el servidor.', 'danger');
+        } finally {
+            btnPut.disabled = false;
+        }
+    });
+
+    cargarPaciente();
+</script>
+{% endblock %}

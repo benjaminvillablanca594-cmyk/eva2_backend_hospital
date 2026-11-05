@@ -1,72 +1,104 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ingresar Paciente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light d-flex align-items-center min-vh-100">
-    <!-- min-vh-100 y d-flex centran la tarjeta vertical y horizontalmente en la pantalla -->
-    <div class="container" style="max-width: 600px;">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white text-center">
-                <h3 class="mb-0">Registrar Nuevo Paciente</h3>
-            </div>
-            <div class="card-body p-4">
-                
-                <!-- El método POST oculta los datos en el envío. -->
-                <form method="POST">
-                    
-                    <!-- {% csrf_token %} es un token de seguridad OBLIGATORIO en Django para formularios POST. 
-                         Si no lo pones, Django bloquea el envío para evitar hackeos de suplantación. -->
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">RUT:</label>
-                        <!-- El atributo 'name' DEBE coincidir exactamente con lo que capturas (request.POST.get) en views.py -->
-                        <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre Completo:</label>
-                        <input type="text" name="nombre_completo" class="form-control" required>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Edad:</label>
-                            <input type="number" name="edad" class="form-control" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha de Ingreso:</label>
-                            <input type="date" name="fecha_ingreso" class="form-control" required>
-                        </div>
-                    </div>
+{% extends 'hospitalapp/base.html' %}
+{% load static %}
+{% comment %} ====================================================================
+   CREAR PACIENTE
+   1. Se valida en el navegador (ver _formulario_paciente.html).
+   2. Si todo está bien, se envía a la API:   POST /api/pacientes/
+   3. Respuestas posibles:
+        201 -> se guardó en MySQL (paciente "En Espera" + primera atención)
+        400 -> el servidor rechazó algún dato (se marca en rojo y se notifica)
+   ==================================================================== {% endcomment %}
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Email de Contacto:</label>
-                        <input type="email" name="email_contacto" class="form-control" required>
-                    </div>
+{% block titulo %}Nuevo paciente{% endblock %}
 
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Estado del Paciente:</label>
-                        <select name="estado" class="form-select">
-                            <option value="En Espera">En Espera</option>
-                            <option value="Atendido">Atendido</option>
-                            <option value="Derivado">Derivado</option>
-                        </select>
-                    </div>
+{# ---------------- Encabezado de la página ---------------- #}
+{% block migas %}<span> / </span><a href="{% url 'listar_pacientes' %}">Pacientes</a><span> / Nuevo</span>{% endblock %}
+{% block titulo_pagina %}Registrar nuevo paciente{% endblock %}
+{% block ilustracion %}
+    <img src="{% static 'hospitalapp/img/crear-ficha.svg' %}" class="ilustracion-encabezado" alt="Doctora completando una ficha">
+{% endblock %}
 
-                    <div class="d-grid gap-2">
-                        <!-- Botón tipo submit: gatilla el envío de los datos a views.py -->
-                        <button type="submit" class="btn btn-success fw-bold">Guardar Paciente</button>
-                        <!-- Botón normal: te devuelve a la lista principal usando la URL -->
-                        <a href="{% url 'listar_pacientes' %}" class="btn btn-secondary">Cancelar</a>
-                    </div>
-                </form>
-            </div>
-        </div>
+{% block contenido %}
+<div class="row g-4">
+
+    <!-- COLUMNA IZQUIERDA: formulario -->
+    <div class="col-lg-8">
+        <section class="tarjeta">
+            <!-- novalidate: mostramos nuestros propios mensajes de error -->
+            <form id="formPaciente" novalidate>
+
+                <!-- Campos compartidos con editar.html -->
+                {% include 'hospitalapp/_formulario_paciente.html' with es_creacion=True %}
+
+                <!-- Mensaje de éxito o error general -->
+                <div id="mensaje" class="mt-4" role="status" aria-live="polite" hidden></div>
+
+                <!-- Botones -->
+                <div class="acciones-formulario">
+                    <a href="{% url 'listar_pacientes' %}" class="btn btn-suave">Cancelar</a>
+                    <button type="submit" id="btnGuardar" class="btn btn-hospital">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar paciente
+                    </button>
+                </div>
+            </form>
+        </section>
     </div>
-</body>
-</html>
+
+    <!-- COLUMNA DERECHA: panel de validación en vivo -->
+    <div class="col-lg-4">
+        {% include 'hospitalapp/_panel_validacion.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    const formulario = document.getElementById('formPaciente');
+    const mensaje = document.getElementById('mensaje');
+    const btnGuardar = document.getElementById('btnGuardar');
+
+    formulario.addEventListener('submit', async function (event) {
+        // 1. Evitar el envío tradicional del formulario
+        event.preventDefault();
+        mensaje.hidden = true;
+
+        // 2. Validar en el navegador. Si hay errores: se pintan en rojo,
+        //    aparece el resumen y NO se envía nada a la API.
+        const errores = validarFormulario();
+        if (Object.keys(errores).length > 0) return;
+
+        btnGuardar.disabled = true;   // evita guardar dos veces
+
+        try {
+            // 3. Enviar a la API:  POST /api/pacientes/  (con token, en JSON)
+            const respuesta = await llamarApi('/api/pacientes/', 'POST', leerDatosPaciente());
+            if (!respuesta) return;
+            const resultado = await leerJson(respuesta);
+
+            if (respuesta.status === 201) {
+                // 201 Created: se guardó en MySQL. Mostramos el mensaje de la API
+                // y vamos a la ficha del paciente nuevo.
+                notificar(resultado.mensaje, 'exito');
+                mostrarMensaje(mensaje, resultado.mensaje + '. Abriendo su ficha...', 'success');
+                setTimeout(() => window.location.href = `/detalle/${resultado.paciente.id}/`, 1200);
+
+            } else if (respuesta.status === 400) {
+                // 400: el servidor rechazó los datos (ej: RUT ya registrado).
+                // Se muestran igual que los errores del navegador.
+                mostrarErroresServidor(resultado.errores || { general: resultado.error });
+
+            } else {
+                // Otro error: se muestra el mensaje que envió la API
+                mostrarMensaje(mensaje, resultado.error || 'No se pudo registrar el paciente.', 'danger');
+                notificar(resultado.error || 'No se pudo registrar el paciente.', 'error');
+            }
+
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje(mensaje, 'Error de conexión con el servidor.', 'danger');
+        } finally {
+            btnGuardar.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

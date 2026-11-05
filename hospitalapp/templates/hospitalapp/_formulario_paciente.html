@@ -1,0 +1,651 @@
+{% comment %} ====================================================================
+   CAMPOS DEL FORMULARIO DE PACIENTE
+   Se reutiliza en crear.html y editar.html con la etiqueta include.
+   En crear se envía es_creacion=True y aparece la sección "Atención".
+
+   VALIDACIONES EN DOS CAPAS (las reglas son las MISMAS en ambas):
+     1. Navegador (este archivo): avisa al instante mientras se escribe.
+        Es ayuda visual: se puede saltar, por ejemplo usando Postman.
+     2. Servidor (views.py -> validar_paciente): es la validación REAL.
+
+   LÍMITES DE TEXTO: cada campo tiene maxlength. El navegador NO deja
+   escribir más allá del límite (y si se pega un texto largo, lo corta).
+   ==================================================================== {% endcomment %}
+
+<p class="small texto-suave mb-4"><span class="obligatorio">*</span> Campo obligatorio</p>
+
+<!-- ================================================================
+     SECCIÓN 1: IDENTIFICACIÓN
+     ================================================================ -->
+<div class="seccion-formulario">
+    <div class="seccion-titulo">
+        <span class="burbuja-icono"><span class="hi hi-pulsera"></span></span>
+        <h2>Identificación</h2>
+    </div>
+
+    <div class="row g-4">
+        <!-- RUT: solo números, guion y K. Máximo 10 caracteres (12345678-5) -->
+        <div class="col-md-5">
+            <label for="rut" class="form-label">RUT <span class="obligatorio">*</span></label>
+            <input type="text" id="rut" class="form-control" placeholder="Ej: 12345678-5"
+                   maxlength="10" data-contador="contador-rut" autocomplete="off" inputmode="text" required>
+            <div class="invalid-feedback" id="error-rut"></div>
+            <div class="d-flex justify-content-between gap-2 mt-1">
+                <small class="form-text mt-0">Solo números, guion (-) y K.</small>
+                <small id="contador-rut" class="contador"></small>
+            </div>
+        </div>
+
+        <!-- NOMBRE: entre 3 y 50 caracteres, solo letras -->
+        <div class="col-md-7">
+            <label for="nombre_completo" class="form-label">Nombre completo <span class="obligatorio">*</span></label>
+            <input type="text" id="nombre_completo" class="form-control" placeholder="Ej: María José Pérez"
+                   maxlength="50" data-contador="contador-nombre" autocomplete="off" required>
+            <div class="invalid-feedback" id="error-nombre_completo"></div>
+            <div class="d-flex justify-content-between gap-2 mt-1">
+                <small class="form-text mt-0">Solo letras y espacios.</small>
+                <small id="contador-nombre" class="contador"></small>
+            </div>
+        </div>
+
+        <!-- FECHA DE NACIMIENTO: reemplaza a la edad (la edad se calcula sola) -->
+        <div class="col-md-5">
+            <label for="fecha_nacimiento" class="form-label">Fecha de nacimiento <span class="obligatorio">*</span></label>
+            <input type="date" id="fecha_nacimiento" class="form-control" required>
+            <div class="invalid-feedback" id="error-fecha_nacimiento"></div>
+            <small class="form-text">Edad: <strong id="edad-calculada">–</strong></small>
+        </div>
+
+        <!-- FECHA DE INGRESO: no futura -->
+        <div class="col-md-7">
+            <label for="fecha_ingreso" class="form-label">Fecha de ingreso <span class="obligatorio">*</span></label>
+            <input type="date" id="fecha_ingreso" class="form-control" min="1900-01-01" required>
+            <div class="invalid-feedback" id="error-fecha_ingreso"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     SECCIÓN 2: CONTACTO
+     ================================================================ -->
+<div class="seccion-formulario">
+    <div class="seccion-titulo">
+        <span class="burbuja-icono"><span class="hi hi-contacto"></span></span>
+        <h2>Contacto</h2>
+    </div>
+
+    <div class="row g-4">
+        <!-- EMAIL: máximo 70 caracteres.
+             type="text" + inputmode="email": el navegador no modifica lo que
+             se escribe y en celular muestra el teclado de correo.
+             Los botones de abajo (atajos) escriben el @ o un dominio con un
+             clic, por si el teclado no deja escribir el @. -->
+        <div class="col-md-7">
+            <label for="email_contacto" class="form-label">Email <span class="obligatorio">*</span></label>
+            <input type="text" id="email_contacto" class="form-control" placeholder="Ej: familia.perez@correo.cl"
+                   maxlength="70" data-contador="contador-email" inputmode="email"
+                   autocomplete="off" autocapitalize="off" spellcheck="false" required>
+            <div class="invalid-feedback" id="error-email_contacto"></div>
+            <div class="d-flex justify-content-between gap-2 mt-1">
+                <small class="form-text mt-0">Formato nombre@dominio.cl</small>
+                <small id="contador-email" class="contador"></small>
+            </div>
+            <!-- Atajos: data-texto es lo que se agrega al correo -->
+            <div class="atajos-email" aria-label="Completar el correo">
+                <button type="button" class="atajo" data-texto="@" title="Escribir el @">@</button>
+                <button type="button" class="atajo" data-texto="@gmail.com">@gmail.com</button>
+                <button type="button" class="atajo" data-texto="@hotmail.com">@hotmail.com</button>
+                <button type="button" class="atajo" data-texto="@outlook.com">@outlook.com</button>
+            </div>
+        </div>
+
+        <!-- TELÉFONO: se escriben solo los 9 dígitos. El "+56" y los espacios
+             se agregan solos mientras se escribe: 912345678 -> +56 9 1234 5678
+             maxlength="15" = largo exacto de "+56 9 1234 5678".
+             El contador cuenta DÍGITOS (no caracteres): 0 / 9 dígitos. -->
+        <div class="col-md-5">
+            <label for="telefono" class="form-label">Teléfono <span class="obligatorio">*</span></label>
+            <input type="text" id="telefono" class="form-control" placeholder="+56 9 1234 5678"
+                   maxlength="15" inputmode="tel" autocomplete="off" required>
+            <div class="invalid-feedback" id="error-telefono"></div>
+            <div class="d-flex justify-content-between gap-2 mt-1">
+                <small class="form-text mt-0">El +56 y los espacios se agregan solos.</small>
+                <small id="contador-telefono" class="contador"></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if es_creacion %}
+<!-- ================================================================
+     SECCIÓN 3: ATENCIÓN (solo al registrar un paciente nuevo)
+     Todo paciente ingresa "En Espera". Luego avanza desde su ficha.
+     ================================================================ -->
+<div class="seccion-formulario">
+    <div class="seccion-titulo">
+        <span class="burbuja-icono"><span class="hi hi-cardiograma"></span></span>
+        <h2>Atención</h2>
+        <span class="pildora-estado estado-espera ms-auto">En Espera</span>
+    </div>
+
+    <!-- DETALLE DE ATENCIÓN: motivo de ingreso, entre 10 y 300 caracteres -->
+    <label for="detalle_atencion" class="form-label">Detalle de atención <span class="obligatorio">*</span></label>
+    <textarea id="detalle_atencion" class="form-control" maxlength="300" data-contador="contador-detalle"
+              placeholder="Motivo de ingreso" required></textarea>
+    <div class="invalid-feedback" id="error-detalle_atencion"></div>
+    <div class="text-end mt-1"><small id="contador-detalle" class="contador"></small></div>
+</div>
+{% endif %}
+
+<!-- ================================================================
+     RESUMEN DE ERRORES: lista todo lo que falta corregir
+     ================================================================ -->
+<div id="resumenErrores" class="alert alert-danger mt-4 mb-0" role="alert" hidden>
+    <strong><i class="bi bi-exclamation-octagon me-1"></i> No se pudo guardar. Corrige lo siguiente:</strong>
+    <ul id="listaErrores" class="mb-0 mt-2"></ul>
+</div>
+
+<script>
+    // =================================================================
+    // CONFIGURACIÓN DE LOS CAMPOS
+    // id = nombre del campo en la API. Solo se usan los que existen en la
+    // página (el detalle de atención aparece solo al crear).
+    // =================================================================
+    const CONFIG_CAMPOS = [
+        { id: 'rut', nombre: 'RUT', regla: 'Solo números, guion y K. Dígito verificador correcto y no repetido.' },
+        { id: 'nombre_completo', nombre: 'Nombre completo', regla: 'Entre 3 y 50 caracteres, solo letras.' },
+        { id: 'fecha_nacimiento', nombre: 'Fecha de nacimiento', regla: 'No futura, máximo 120 años y anterior al ingreso.' },
+        { id: 'fecha_ingreso', nombre: 'Fecha de ingreso', regla: 'No puede ser futura.' },
+        { id: 'email_contacto', nombre: 'Email', regla: 'Formato válido, máximo 70 caracteres.' },
+        { id: 'telefono', nombre: 'Teléfono', regla: '9 dígitos (el +56 y los espacios se agregan solos).' },
+        { id: 'detalle_atencion', nombre: 'Detalle de atención', regla: 'Entre 10 y 300 caracteres.' }
+    ];
+    const CAMPOS_PACIENTE = CONFIG_CAMPOS.filter(c => document.getElementById(c.id)).map(c => c.id);
+    const NOMBRES_CAMPOS = Object.fromEntries(CONFIG_CAMPOS.map(c => [c.id, c.nombre]));
+    NOMBRES_CAMPOS.general = 'Formulario';
+    NOMBRES_CAMPOS.estado = 'Estado';
+
+    // Fechas límite en formato AAAA-MM-DD (hora local)
+    const HOY = new Date().toLocaleDateString('en-CA');
+    const hace120 = new Date(); hace120.setFullYear(hace120.getFullYear() - 120);
+    const MINIMO_NACIMIENTO = hace120.toLocaleDateString('en-CA');
+    document.getElementById('fecha_ingreso').max = HOY;
+    document.getElementById('fecha_nacimiento').max = HOY;
+    document.getElementById('fecha_nacimiento').min = MINIMO_NACIMIENTO;
+
+    // id del paciente que se edita (en crear no existe)
+    function idPacienteActual() {
+        const formulario = document.getElementById('formPaciente');
+        return formulario && formulario.dataset.pacienteId ? Number(formulario.dataset.pacienteId) : null;
+    }
+
+    // =================================================================
+    // FILTROS DE ESCRITURA
+    // Borran al instante los caracteres que no están permitidos.
+    // =================================================================
+
+    // RUT: solo números, la letra K y UN guion. Todo lo demás (puntos,
+    // letras, espacios) no se puede escribir.
+    const campoRut = document.getElementById('rut');
+    campoRut.addEventListener('input', function () {
+        const original = campoRut.value.toUpperCase();
+        let limpio = original.replace(/[^0-9K-]/g, '');
+        const guion = limpio.indexOf('-');
+        if (guion !== -1) {      // deja solo el primer guion
+            limpio = limpio.slice(0, guion + 1) + limpio.slice(guion + 1).replace(/-/g, '');
+        }
+        if (limpio !== original) {
+            notificar('En el RUT solo se permiten números, el guion (-) y la letra K.', 'advertencia');
+        }
+        campoRut.value = limpio;
+    });
+
+    // -----------------------------------------------------------------
+    // TELÉFONO CON FORMATO AUTOMÁTICO
+    // Se escriben solo números; el "+56" y los espacios se agregan solos:
+    //   9  ->  +56 9        91234  ->  +56 9 1234        912345678  ->  +56 9 1234 5678
+    // -----------------------------------------------------------------
+    const campoTelefono = document.getElementById('telefono');
+    const contadorTelefono = document.getElementById('contador-telefono');
+    const DIGITOS_TELEFONO = 9;
+
+    // Saca solo los dígitos del número, sin el código de Chile (+56)
+    function digitosTelefono(texto) {
+        let resto = texto.trim();
+        if (resto.startsWith('+56')) resto = resto.slice(3);       // quita el +56 (lo pone el sistema)
+        let digitos = resto.replace(/\D/g, '');                     // deja solo números
+        // Si pegó el número con el 56 adelante (56912345678), se quita el 56
+        if (digitos.length > DIGITOS_TELEFONO && digitos.startsWith('56')) digitos = digitos.slice(2);
+        return digitos;
+    }
+
+    // Arma el texto con espacios: "+56 9 1234 5678"
+    function formatoTelefono(digitos) {
+        if (!digitos) return '';
+        let texto = '+56 ' + digitos.slice(0, 1);
+        if (digitos.length > 1) texto += ' ' + digitos.slice(1, 5);
+        if (digitos.length > 5) texto += ' ' + digitos.slice(5, 9);
+        return texto;
+    }
+
+    // Contador de dígitos (ámbar al llegar a 9)
+    function actualizarContadorTelefono(cantidad) {
+        contadorTelefono.textContent = cantidad + ' / ' + DIGITOS_TELEFONO + ' dígitos';
+        contadorTelefono.classList.toggle('limite', cantidad >= DIGITOS_TELEFONO);
+    }
+
+    // Deja el cursor después del mismo número de dígitos que tenía antes
+    // (así se puede corregir un dígito del medio sin que el cursor salte al final)
+    function posicionCursor(texto, cantidadDigitos) {
+        let i = 4;                                    // justo después de "+56 "
+        let contados = 0;
+        while (i < texto.length && contados < cantidadDigitos) {
+            if (/\d/.test(texto[i])) contados++;
+            i++;
+        }
+        return Math.min(i, texto.length);
+    }
+
+    // Aplica el formato a un texto y lo deja en el campo
+    function aplicarFormatoTelefono(texto) {
+        let digitos = digitosTelefono(texto);
+        if (digitos.length > DIGITOS_TELEFONO) {
+            notificar('El teléfono tiene máximo 9 dígitos.', 'advertencia');
+            digitos = digitos.slice(0, DIGITOS_TELEFONO);
+        }
+        campoTelefono.value = formatoTelefono(digitos);
+        actualizarContadorTelefono(digitos.length);
+    }
+
+    campoTelefono.addEventListener('input', function () {
+        const original = campoTelefono.value;
+
+        // Si está escribiendo el "+56" a mano ("+", "+5", "+56"), se deja así
+        // hasta que escriba el primer dígito del número.
+        if ('+56 '.startsWith(original)) {
+            actualizarContadorTelefono(0);
+            return;
+        }
+
+        // Letras o símbolos: no se escriben y aparece un aviso
+        if (/[^0-9+ ]/.test(original)) {
+            notificar('En el teléfono solo se escriben números: el +56 y los espacios se agregan solos.', 'advertencia');
+        }
+
+        // Cuántos dígitos había antes del cursor (para devolverlo a su lugar)
+        const digitosAntesDelCursor = digitosTelefono(original.slice(0, campoTelefono.selectionStart)).length;
+
+        aplicarFormatoTelefono(original);
+
+        if (document.activeElement === campoTelefono) {
+            const posicion = posicionCursor(campoTelefono.value, digitosAntesDelCursor);
+            campoTelefono.setSelectionRange(posicion, posicion);
+        }
+    });
+
+    // Al PEGAR un número (ej: "+56 9 1234 5678" o "56912345678") se arma
+    // el texto completo y se le aplica el mismo formato.
+    campoTelefono.addEventListener('paste', function (event) {
+        event.preventDefault();
+        const pegado = event.clipboardData.getData('text');
+        const actual = campoTelefono.value;
+        const texto = actual.slice(0, campoTelefono.selectionStart) + pegado + actual.slice(campoTelefono.selectionEnd);
+        aplicarFormatoTelefono(texto);
+        campoTelefono.dispatchEvent(new Event('input'));     // valida en vivo
+    });
+
+    actualizarContadorTelefono(0);
+
+    // -----------------------------------------------------------------
+    // ATAJOS DEL EMAIL: botones que escriben "@" o un dominio completo.
+    // Sirven aunque el teclado no deje escribir el @.
+    // -----------------------------------------------------------------
+    const campoEmail = document.getElementById('email_contacto');
+    const MAX_EMAIL = Number(campoEmail.getAttribute('maxlength'));     // 70
+
+    document.querySelectorAll('.atajo').forEach(function (boton) {
+        // mousedown + preventDefault: el campo NO pierde el foco al hacer clic
+        boton.addEventListener('mousedown', function (event) { event.preventDefault(); });
+
+        boton.addEventListener('click', function () {
+            const agregar = boton.dataset.texto;                  // "@" o "@gmail.com"
+            const valor = campoEmail.value;
+            let nuevo;
+            let cursor;
+
+            if (agregar === '@') {
+                // Escribe el @ donde está el cursor (solo si todavía no hay uno)
+                if (valor.includes('@')) {
+                    notificar('El email ya tiene un @.', 'advertencia');
+                    campoEmail.focus();
+                    return;
+                }
+                const inicio = campoEmail.selectionStart ?? valor.length;
+                const fin = campoEmail.selectionEnd ?? valor.length;
+                nuevo = valor.slice(0, inicio) + '@' + valor.slice(fin);
+                cursor = inicio + 1;
+            } else {
+                // Dominio: reemplaza todo lo que haya después del @
+                const usuario = valor.split('@')[0];
+                nuevo = usuario + agregar;
+                cursor = usuario ? nuevo.length : 0;               // sin nombre: cursor al inicio
+            }
+
+            // Respeta el máximo de 70 caracteres
+            if (nuevo.length > MAX_EMAIL) {
+                notificar('El email puede tener máximo ' + MAX_EMAIL + ' caracteres.', 'advertencia');
+                return;
+            }
+
+            campoEmail.value = nuevo;
+            campoEmail.focus();
+            campoEmail.setSelectionRange(cursor, cursor);
+            campoEmail.dispatchEvent(new Event('input'));          // contador + validación
+            if (nuevo.includes('.')) validarCampo('email_contacto');
+        });
+    });
+
+    // Edad calculada al elegir la fecha de nacimiento
+    function calcularEdad(fechaIso) {
+        if (!fechaIso) return null;
+        const [a, m, d] = fechaIso.split('-').map(Number);
+        const hoy = new Date();
+        let edad = hoy.getFullYear() - a;
+        if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
+        return edad;
+    }
+    const campoNacimiento = document.getElementById('fecha_nacimiento');
+    campoNacimiento.addEventListener('change', function () {
+        const edad = calcularEdad(campoNacimiento.value);
+        document.getElementById('edad-calculada').textContent =
+            edad === null || edad < 0 ? '–' : edad + (edad === 1 ? ' año' : ' años');
+    });
+
+    // =================================================================
+    // REGLAS DE VALIDACIÓN (las mismas de validar_paciente en views.py)
+    // Cada regla recibe el valor escrito y devuelve:
+    //   ''          -> si está correcto
+    //   'mensaje'   -> si hay un error
+    // =================================================================
+
+    // Dígito verificador del RUT (algoritmo módulo 11)
+    function calcularDv(cuerpo) {
+        let suma = 0;
+        let factor = 2;
+        for (let i = cuerpo.length - 1; i >= 0; i--) {       // de derecha a izquierda
+            suma += Number(cuerpo[i]) * factor;
+            factor = factor === 7 ? 2 : factor + 1;           // 2,3,4,5,6,7,2,3...
+        }
+        const resto = 11 - (suma % 11);
+        if (resto === 11) return '0';
+        if (resto === 10) return 'K';
+        return String(resto);
+    }
+
+    let rutRepetido = null;   // último RUT que la API dijo que ya existe
+
+    const MENSAJE_RUT_REPETIDO = 'RUT inválido: ya existe un paciente registrado con este RUT.';
+
+    const REGLAS = {
+        rut: function (valor) {
+            const rut = valor.trim().toUpperCase();
+            if (!rut) return 'El RUT es obligatorio.';
+            if (!/^\d{7,8}-[\dK]$/.test(rut)) {
+                return 'Formato de RUT inválido. Debe ser 7 u 8 números, guion y dígito verificador (ej: 12345678-5).';
+            }
+            const [cuerpo, dv] = rut.split('-');
+            if (calcularDv(cuerpo) !== dv) return 'RUT inválido: el dígito verificador no corresponde.';
+            if (rut === rutRepetido) return MENSAJE_RUT_REPETIDO;
+            return '';
+        },
+
+        nombre_completo: function (valor) {
+            const nombre = valor.trim().replace(/\s+/g, ' ');
+            if (!nombre) return 'El nombre es obligatorio.';
+            if (nombre.length < 3 || nombre.length > 50) return 'El nombre debe tener entre 3 y 50 caracteres.';
+            if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/.test(nombre)) {
+                return 'El nombre solo puede contener letras y espacios (sin números ni símbolos).';
+            }
+            return '';
+        },
+
+        fecha_nacimiento: function (valor) {
+            if (!valor) return 'La fecha de nacimiento es obligatoria.';
+            if (valor > HOY) return 'La fecha de nacimiento no puede ser futura.';
+            if (valor < MINIMO_NACIMIENTO) return 'La edad no puede superar los 120 años.';
+            const ingreso = document.getElementById('fecha_ingreso').value;
+            if (ingreso && valor > ingreso) return 'La fecha de nacimiento no puede ser posterior a la fecha de ingreso.';
+            return '';
+        },
+
+        fecha_ingreso: function (valor) {
+            if (!valor) return 'La fecha de ingreso es obligatoria.';
+            if (valor > HOY) return 'La fecha de ingreso no puede ser futura.';
+            if (valor < '1900-01-01') return 'La fecha de ingreso no puede ser anterior a 01-01-1900.';
+            return '';
+        },
+
+        email_contacto: function (valor) {
+            const email = valor.trim();
+            if (!email) return 'El email es obligatorio.';
+            if (email.length > 70) return 'El email debe tener máximo 70 caracteres.';
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+                return 'El email no tiene un formato válido (ej: nombre@dominio.cl).';
+            }
+            return '';
+        },
+
+        telefono: function (valor) {
+            let numero = valor.replace(/\s/g, '');
+            if (!numero) return 'El teléfono es obligatorio.';
+            if (numero.startsWith('+56')) numero = numero.slice(3);
+            else if (numero.startsWith('56') && numero.length === 11) numero = numero.slice(2);
+            if (!/^[2-9]\d{8}$/.test(numero)) return 'Teléfono inválido: deben ser 9 dígitos (ej: +56 9 1234 5678).';
+            return '';
+        },
+
+        detalle_atencion: function (valor) {
+            const detalle = valor.trim().replace(/\s+/g, ' ');
+            if (!detalle) return 'Debes escribir el detalle de la atención.';
+            if (detalle.length < 10 || detalle.length > 300) return 'El detalle debe tener entre 10 y 300 caracteres.';
+            return '';
+        }
+    };
+
+    // =================================================================
+    // RUT REPETIDO: se consulta a la API al salir del campo
+    //   GET /api/pacientes/?rut=12345678-5
+    // Si ya existe otro paciente con ese RUT, se marca y se notifica.
+    // =================================================================
+    async function revisarRutRepetido() {
+        const rut = campoRut.value.trim().toUpperCase();
+        rutRepetido = null;
+        if (REGLAS.rut(rut) !== '') return;            // primero debe tener formato válido
+
+        try {
+            const respuesta = await llamarApi('/api/pacientes/?rut=' + encodeURIComponent(rut));
+            if (!respuesta || !respuesta.ok) return;
+            const encontrados = await respuesta.json();
+            const otro = encontrados.find(p => p.id !== idPacienteActual());
+            if (otro) {
+                rutRepetido = rut;
+                marcarCampo('rut', MENSAJE_RUT_REPETIDO);
+                actualizarResumenEnVivo();
+                notificar(MENSAJE_RUT_REPETIDO, 'error');
+            }
+        } catch (error) {
+            console.error('No se pudo revisar el RUT:', error);
+        }
+    }
+    campoRut.addEventListener('change', revisarRutRepetido);
+
+    // =================================================================
+    // MOSTRAR EL RESULTADO EN PANTALLA
+    // =================================================================
+
+    // Pinta UN campo: rojo con mensaje (error) o verde (correcto)
+    // y actualiza su fila en el panel de validación.
+    function marcarCampo(campo, mensajeError) {
+        const input = document.getElementById(campo);
+        const divError = document.getElementById('error-' + campo);
+        if (!input || !divError) return;
+
+        divError.textContent = mensajeError;                 // textContent: seguro contra XSS
+        input.classList.toggle('is-invalid', mensajeError !== '');
+        input.classList.toggle('is-valid', mensajeError === '');
+        actualizarPanel(campo, mensajeError === '' ? 'ok' : 'error');
+    }
+
+    // Arma la lista del panel de validación (columna derecha)
+    function construirPanel() {
+        const lista = document.getElementById('lista-validacion');
+        if (!lista) return;
+        lista.replaceChildren();
+        CONFIG_CAMPOS.filter(c => CAMPOS_PACIENTE.includes(c.id)).forEach(function (c) {
+            const li = document.createElement('li');
+            const marca = document.createElement('span');
+            marca.id = 'marca-' + c.id;
+            marca.className = 'marca-estado';
+            marca.innerHTML = '<i class="bi bi-dot"></i>';
+            const textos = document.createElement('div');
+            const nombre = document.createElement('div');
+            nombre.className = 'campo-nombre';
+            nombre.textContent = c.nombre;
+            const regla = document.createElement('div');
+            regla.className = 'campo-regla';
+            regla.textContent = c.regla;
+            textos.append(nombre, regla);
+            li.append(marca, textos);
+            lista.appendChild(li);
+        });
+        actualizarProgreso();
+    }
+    document.addEventListener('DOMContentLoaded', construirPanel);
+
+    // Ícono de un campo en el panel: pendiente, ok o error
+    function actualizarPanel(campo, estado) {
+        const marca = document.getElementById('marca-' + campo);
+        if (!marca) return;
+        marca.className = 'marca-estado ' + estado;
+        marca.innerHTML = estado === 'ok' ? '<i class="bi bi-check-lg"></i>'
+                        : estado === 'error' ? '<i class="bi bi-x-lg"></i>'
+                        : '<i class="bi bi-dot"></i>';
+        actualizarProgreso();
+    }
+
+    // Barra de progreso: cuántos campos están correctos
+    function actualizarProgreso() {
+        const barra = document.getElementById('barra-progreso');
+        if (!barra) return;
+        const correctos = document.querySelectorAll('#lista-validacion .marca-estado.ok').length;
+        barra.style.width = (correctos / CAMPOS_PACIENTE.length * 100) + '%';
+        document.getElementById('texto-progreso').textContent =
+            `${correctos} de ${CAMPOS_PACIENTE.length} campos correctos`;
+    }
+
+    // Valida UN campo con su regla y lo pinta
+    function validarCampo(campo) {
+        const mensajeError = REGLAS[campo](document.getElementById(campo).value);
+        marcarCampo(campo, mensajeError);
+        actualizarResumenEnVivo();
+        return mensajeError;
+    }
+
+    // Lista de errores (caja roja). Recibe { campo: mensaje }
+    function mostrarResumen(errores) {
+        const resumen = document.getElementById('resumenErrores');
+        const lista = document.getElementById('listaErrores');
+        lista.replaceChildren();
+        Object.entries(errores).forEach(function ([campo, texto]) {
+            const li = document.createElement('li');
+            const nombre = document.createElement('strong');
+            nombre.textContent = (NOMBRES_CAMPOS[campo] || campo) + ': ';
+            li.append(nombre, texto);
+            lista.appendChild(li);
+        });
+        resumen.hidden = Object.keys(errores).length === 0;
+    }
+
+    // Si el resumen está a la vista, lo rehace con los errores actuales
+    function actualizarResumenEnVivo() {
+        if (document.getElementById('resumenErrores').hidden) return;
+        const errores = {};
+        CAMPOS_PACIENTE.forEach(function (campo) {
+            if (document.getElementById(campo).classList.contains('is-invalid')) {
+                errores[campo] = document.getElementById('error-' + campo).textContent;
+            }
+        });
+        mostrarResumen(errores);
+    }
+
+    // =================================================================
+    // FUNCIONES QUE USAN crear.html Y editar.html
+    // =================================================================
+
+    // Valida TODO el formulario. Devuelve { campo: mensaje } con los errores.
+    function validarFormulario() {
+        const errores = {};
+        CAMPOS_PACIENTE.forEach(function (campo) {
+            const mensajeError = validarCampo(campo);
+            if (mensajeError) errores[campo] = mensajeError;
+        });
+        mostrarResumen(errores);
+        const primero = CAMPOS_PACIENTE.find(campo => errores[campo]);
+        if (primero) document.getElementById(primero).focus();
+        return errores;
+    }
+
+    // Muestra los errores que devolvió la API (respuesta 400)
+    // y avisa con una notificación (ej: RUT repetido).
+    function mostrarErroresServidor(errores) {
+        Object.entries(errores).forEach(([campo, texto]) => marcarCampo(campo, texto));
+        mostrarResumen(errores);
+        const primero = Object.values(errores)[0];
+        if (primero) notificar(primero, 'error');
+        if (errores.rut === MENSAJE_RUT_REPETIDO) rutRepetido = campoRut.value.trim().toUpperCase();
+    }
+
+    // Lee los valores escritos y arma el objeto que se enviará como JSON
+    function leerDatosPaciente() {
+        const datos = {};
+        CAMPOS_PACIENTE.forEach(function (campo) {
+            datos[campo] = document.getElementById(campo).value.trim();
+        });
+        datos.rut = datos.rut.toUpperCase();
+        return datos;
+    }
+
+    // Rellena el formulario con los datos de un paciente (usado en editar)
+    function cargarDatosPaciente(paciente) {
+        CAMPOS_PACIENTE.forEach(function (campo) {
+            const input = document.getElementById(campo);
+            let valor = paciente[campo] ?? '';
+            if (campo === 'rut') valor = valor.replaceAll('.', '');            // RUT antiguos con puntos
+            if (campo === 'telefono' && valor) valor = formatearTelefono(valor);
+            input.value = valor;
+            input.dispatchEvent(new Event('input'));          // actualiza contadores
+        });
+        campoNacimiento.dispatchEvent(new Event('change'));   // muestra la edad
+    }
+
+    // =================================================================
+    // VALIDACIÓN EN TIEMPO REAL
+    //  - Al salir de un campo (blur) se valida y se pinta.
+    //  - Mientras se escribe (input), se re-valida si ya estaba marcado.
+    // =================================================================
+    CAMPOS_PACIENTE.forEach(function (campo) {
+        const input = document.getElementById(campo);
+        input.addEventListener('blur', () => validarCampo(campo));
+        input.addEventListener('change', () => validarCampo(campo));
+        input.addEventListener('input', function () {
+            if (input.classList.contains('is-invalid') || input.classList.contains('is-valid')) {
+                validarCampo(campo);
+            }
+        });
+    });
+
+    // Las fechas se comparan entre sí: al cambiar una, se revisa la otra
+    document.getElementById('fecha_ingreso').addEventListener('change', function () {
+        if (campoNacimiento.value) validarCampo('fecha_nacimiento');
+    });
+</script>
