@@ -1,0 +1,22 @@
+{% comment %} ====================================================================
+   PANEL DE VALIDACIÓN (columna derecha de crear.html y editar.html)
+   Muestra cada campo con su regla y un ícono que cambia en vivo:
+       •  pendiente     ✓  correcto (verde)     ✕  con error (rojo)
+   La lista la arma construirPanel() de _formulario_paciente.html con
+   los campos que tiene la página.
+   ==================================================================== {% endcomment %}
+<aside class="tarjeta panel-validacion">
+    <div class="tarjeta-titulo">
+        <span class="burbuja-icono"><span class="hi hi-cardiograma"></span></span>
+        Validación de la ficha
+    </div>
+
+    <!-- Barra de progreso -->
+    <div class="progress progreso-validacion mb-2" role="progressbar" aria-label="Campos correctos">
+        <div id="barra-progreso" class="progress-bar" style="width: 0%"></div>
+    </div>
+    <p id="texto-progreso" class="small fw-semibold mb-3"></p>
+
+    <!-- Una fila por campo (la llena JavaScript) -->
+    <ul id="lista-validacion" class="lista-validacion"></ul>
+</aside>
