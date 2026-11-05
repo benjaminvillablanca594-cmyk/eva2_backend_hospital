@@ -1,0 +1,160 @@
+{% extends 'hospitalapp/base.html' %}
+{% load static %}
+{% comment %} ====================================================================
+   PÁGINA DE LOGIN
+   - El formulario NO se envía de la forma tradicional: JavaScript lo
+     intercepta, llama a la API  POST /api/login/  y guarda el token.
+   - Reemplaza el bloque "pagina" completo: el login no lleva la barra
+     superior ni el encabezado de las otras páginas.
+   ==================================================================== {% endcomment %}
+
+{% block titulo %}Iniciar sesión{% endblock %}
+
+{% block pagina %}
+<div class="login-pantalla">
+
+    <!-- ============================================================
+         COLUMNA IZQUIERDA: marca, mensaje e ilustración
+         ============================================================ -->
+    <section class="login-marca">
+        <div class="marca">
+            <span class="marca-logo"><span class="hi hi-hospital"></span></span>
+            <span>
+                <span class="marca-nombre d-block">Hospital</span>
+            </span>
+        </div>
+
+        <h1>Sistema de Gestión<br>de Pacientes</h1>
+
+        <!-- Ilustración (unDraw, recoloreada con los colores del hospital) -->
+        <div class="login-ilustracion">
+            <img src="{% static 'hospitalapp/img/login-hospital.svg' %}" alt="Personal médico junto a un corazón con electrocardiograma">
+        </div>
+
+    </section>
+
+    <!-- ============================================================
+         COLUMNA DERECHA: formulario de acceso
+         ============================================================ -->
+    <section class="login-formulario">
+        <div class="login-caja">
+            <h2 class="mb-4">Iniciar sesión</h2>
+
+            <!-- novalidate: las validaciones las hacemos con JavaScript y en el servidor -->
+            <form id="formLogin" novalidate>
+
+                <!-- USUARIO: obligatorio, máximo 30 caracteres (no deja escribir más) -->
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuario <span class="obligatorio">*</span></label>
+                    <div class="campo-con-icono">
+                        <i class="bi bi-person"></i>
+                        <input type="text" id="username" class="form-control" placeholder="Ej: benja"
+                               autocomplete="username" maxlength="30" data-contador="contador-usuario" required>
+                        <div class="invalid-feedback">Ingresa tu usuario.</div>
+                    </div>
+                    <div class="text-end mt-1"><small id="contador-usuario" class="contador"></small></div>
+                </div>
+
+                <!-- CONTRASEÑA: obligatoria, máximo 50 caracteres (no deja escribir más) -->
+                <div class="mb-4">
+                    <label for="password" class="form-label">Contraseña <span class="obligatorio">*</span></label>
+                    <div class="campo-con-icono">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" id="password" class="form-control" placeholder="Tu contraseña"
+                               autocomplete="current-password" maxlength="50" data-contador="contador-clave" required>
+                        <!-- Botón para mostrar u ocultar la contraseña -->
+                        <button type="button" id="btnVerClave" class="boton-ver-clave" aria-label="Mostrar contraseña">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <div class="invalid-feedback">Ingresa tu contraseña.</div>
+                    </div>
+                    <div class="text-end mt-1"><small id="contador-clave" class="contador"></small></div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" id="btnIngresar" class="btn btn-hospital btn-lg">
+                        Ingresar <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Aquí aparecen los mensajes de éxito o error de la API -->
+            <div id="mensaje" class="mt-4" role="status" aria-live="polite" hidden></div>
+
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    const formulario = document.getElementById('formLogin');
+    const mensaje = document.getElementById('mensaje');
+    const btnIngresar = document.getElementById('btnIngresar');
+    const campoUsuario = document.getElementById('username');
+    const campoClave = document.getElementById('password');
+
+    // ---------------------------------------------------------------
+    // Mostrar / ocultar contraseña (cambia el tipo del input)
+    // ---------------------------------------------------------------
+    document.getElementById('btnVerClave').addEventListener('click', function () {
+        const oculta = campoClave.type === 'password';
+        campoClave.type = oculta ? 'text' : 'password';
+        this.innerHTML = oculta ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+    });
+
+    // ---------------------------------------------------------------
+    // Envío del formulario -> POST /api/login/
+    // ---------------------------------------------------------------
+    formulario.addEventListener('submit', async function (event) {
+        // 1. Evitar el envío tradicional (que recargaría la página)
+        event.preventDefault();
+        mensaje.hidden = true;
+
+        // 2. Leer lo escrito
+        const username = campoUsuario.value.trim();
+        const password = campoClave.value;
+
+        // 3. Validación en el navegador: campos vacíos se marcan en rojo
+        campoUsuario.classList.toggle('is-invalid', !username);
+        campoClave.classList.toggle('is-invalid', !password);
+        if (!username || !password) {
+            mostrarMensaje(mensaje, 'Debes ingresar usuario y contraseña.', 'warning');
+            return;
+        }
+
+        btnIngresar.disabled = true;   // evita doble envío
+
+        try {
+            // 4. Enviar las credenciales a la API en formato JSON
+            const respuesta = await fetch('/api/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            });
+            const datos = await respuesta.json();
+
+            // 5. Revisar la respuesta según el código HTTP
+            if (respuesta.ok) {
+                // 200: guardamos el token. Cada página lo enviará en el encabezado
+                //      Authorization: Token <clave>
+                sessionStorage.setItem('token', datos.token);
+                mostrarMensaje(mensaje, datos.mensaje + '. Redirigiendo...', 'success');
+                window.location.href = '/pacientes/';
+            } else {
+                // 400 (faltan datos), 401 (credenciales malas) o 429 (demasiados intentos).
+                // Se muestra el mensaje exacto que envía la API.
+                campoClave.value = '';
+                mostrarMensaje(mensaje, datos.error || 'No se pudo iniciar sesión.', respuesta.status === 429 ? 'warning' : 'danger');
+            }
+
+        } catch (error) {
+            // Error de red o servidor apagado
+            console.error(error);
+            mostrarMensaje(mensaje, 'No se pudo conectar con el servidor. Revisa que esté encendido.', 'danger');
+        } finally {
+            btnIngresar.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
