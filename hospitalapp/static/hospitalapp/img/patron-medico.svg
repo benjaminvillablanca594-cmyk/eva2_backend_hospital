@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84" viewBox="0 0 84 84">
+  <!-- Patrón de fondo: cruces médicas pequeñas que se repiten (usado en encabezados) -->
+  <g fill="#0f9d8f" opacity="0.07">
+    <path d="M14 8h4v6h6v4h-6v6h-4v-6H8v-4h6z"/>
+    <path d="M60 52h3v4.5h4.5v3H63V64h-3v-4.5h-4.5v-3H60z"/>
+  </g>
+</svg>
