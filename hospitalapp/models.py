@@ -32,5 +32,5 @@ class Paciente(models.Model):
 
     # Este método "mágico" (str) permite que cuando le pidas a Django mostrar un paciente,
     # no te devuelva un código raro (ej: Object 1), sino que te muestre: "12345678-9 - Juan Pérez".
-    def str(self):
+    def __str__(self):
         return f"{self.rut} - {self.nombre_completo}"

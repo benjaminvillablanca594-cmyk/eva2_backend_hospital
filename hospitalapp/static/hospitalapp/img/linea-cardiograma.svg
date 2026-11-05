@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="80" viewBox="0 0 600 80" preserveAspectRatio="none">
+  <!-- Línea de electrocardiograma decorativa (borde inferior de los encabezados) -->
+  <path d="M0 50 H170 L185 50 L195 20 L210 72 L224 8 L238 62 L248 50 H360 L372 50 L380 36 L390 58 L398 50 H600"
+        fill="none" stroke="#0f9d8f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+</svg>

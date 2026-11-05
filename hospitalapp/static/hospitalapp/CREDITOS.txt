@@ -1,0 +1,9 @@
+RECURSOS GRÁFICOS USADOS (todos de uso libre)
+
+- Ilustraciones (carpeta img/): unDraw (https://undraw.co), licencia libre de unDraw.
+  Recoloreadas con la paleta del hospital (azul marino y verde agua).
+- Íconos médicos (carpeta iconos/): Healthicons (https://healthicons.org), dominio público CC0.
+- Íconos de acciones (vendor/bootstrap-icons/): Bootstrap Icons, licencia MIT.
+- Estilos base (css/bootstrap.min.css): Bootstrap 5.3.2, licencia MIT.
+- Tipografía (fuentes/): Plus Jakarta Sans, licencia SIL Open Font License.
+- patron-medico.svg y linea-cardiograma.svg: creados para este proyecto.
